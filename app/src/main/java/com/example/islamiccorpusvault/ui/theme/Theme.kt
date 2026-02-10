@@ -1,79 +1,51 @@
 package com.example.islamiccorpusvault.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 
-// ---- Brand palette (light) ----
-private val IcvPrimary = Color(0xFF2E5E4E)        // deep green (not neon)
-private val IcvOnPrimary = Color(0xFFFFFFFF)
+private val LightColors = lightColorScheme(
+    primary = Color(0xFF1F2937),          // Near-black ink
+    onPrimary = Color.White,
 
-private val IcvBackground = Color(0xFFF6F4EF)     // warm paper
-private val IcvSurface = Color(0xFFFDFBF7)        // slightly brighter paper
-private val IcvSurfaceVariant = Color(0xFFECE7DE) // soft card background
-private val IcvOnSurface = Color(0xFF1E1B16)
-private val IcvOnSurfaceVariant = Color(0xFF4B463F)
-private val IcvOutline = Color(0xFFCEC7BC)
+    background = Color(0xFFF9FAFB),       // Soft paper
+    onBackground = Color(0xFF111827),
 
-// ---- Brand palette (dark) ----
-private val IcvDarkPrimary = Color(0xFF89C7B2)
-private val IcvDarkOnPrimary = Color(0xFF0B2019)
+    surface = Color.White,
+    onSurface = Color(0xFF111827),
 
-private val IcvDarkBackground = Color(0xFF0F1412)
-private val IcvDarkSurface = Color(0xFF131A17)
-private val IcvDarkSurfaceVariant = Color(0xFF1A2420)
-private val IcvDarkOnSurface = Color(0xFFE7E1D8)
-private val IcvDarkOnSurfaceVariant = Color(0xFFB7B1A8)
-private val IcvDarkOutline = Color(0xFF3A4A43)
+    surfaceVariant = Color(0xFFF3F4F6),
+    onSurfaceVariant = Color(0xFF4B5563),
 
-private val DarkColorScheme = darkColorScheme(
-    primary = IcvDarkPrimary,
-    onPrimary = IcvDarkOnPrimary,
-    background = IcvDarkBackground,
-    surface = IcvDarkSurface,
-    surfaceVariant = IcvDarkSurfaceVariant,
-    onSurface = IcvDarkOnSurface,
-    onSurfaceVariant = IcvDarkOnSurfaceVariant,
-    outline = IcvDarkOutline,
+    outline = Color(0xFFE5E7EB)
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = IcvPrimary,
-    onPrimary = IcvOnPrimary,
-    background = IcvBackground,
-    surface = IcvSurface,
-    surfaceVariant = IcvSurfaceVariant,
-    onSurface = IcvOnSurface,
-    onSurfaceVariant = IcvOnSurfaceVariant,
-    outline = IcvOutline,
+private val DarkColors = darkColorScheme(
+    primary = Color(0xFFE5E7EB),           // Soft light ink
+    onPrimary = Color(0xFF111827),
+
+    background = Color(0xFF0B0F14),        // Deep night
+    onBackground = Color(0xFFE5E7EB),
+
+    surface = Color(0xFF111827),
+    onSurface = Color(0xFFE5E7EB),
+
+    surfaceVariant = Color(0xFF1F2937),
+    onSurfaceVariant = Color(0xFF9CA3AF),
+
+    outline = Color(0xFF374151)
 )
 
 @Composable
 fun IslamicCorpusVaultTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Keep this false so your app looks the same on every phone (no random dynamic colors).
-    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = if (darkTheme) DarkColors else LightColors,
         typography = Typography,
         content = content
     )
