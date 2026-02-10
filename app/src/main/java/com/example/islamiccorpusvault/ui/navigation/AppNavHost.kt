@@ -19,8 +19,14 @@ fun AppNavHost(
         startDestination = Routes.HOME,
         modifier = modifier,
     ) {
-        composable(Routes.HOME) { HomeScreen() }
-        composable(Routes.LIBRARY) { LibraryScreen() }
-        composable(Routes.SETTINGS) { SettingsScreen() }
+        composable(Routes.HOME) {
+            HomeScreen()
+        }
+        composable(Routes.LIBRARY) {
+            LibraryScreen()
+        }
+        composable(Routes.SETTINGS) {
+            SettingsScreen()
+        }
     }
 }
