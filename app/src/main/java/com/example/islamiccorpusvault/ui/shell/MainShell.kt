@@ -1,4 +1,4 @@
-package com.example.islamiccorpusvault.ui.screens
+package com.example.islamiccorpusvault.ui.shell
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -28,6 +28,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Alignment
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedButton
 
 @Composable
 fun MainShell() {
@@ -96,11 +100,16 @@ fun MainShell() {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
-            Text(
-                text = "View all",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
+            TextButton(
+                onClick = { /* TODO: navigate to full recents */ },
+                contentPadding = ButtonDefaults.TextButtonContentPadding
+            ) {
+                Text(
+                    text = "View all",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(10.dp))
