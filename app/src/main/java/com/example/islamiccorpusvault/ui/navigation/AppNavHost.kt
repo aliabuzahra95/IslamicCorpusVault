@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import com.example.islamiccorpusvault.ui.screens.HomeScreen
 import com.example.islamiccorpusvault.ui.screens.LibraryScreen
 import com.example.islamiccorpusvault.ui.screens.SettingsScreen
+import com.example.islamiccorpusvault.ui.screens.ScholarsScreen
 
 @Composable
 fun AppNavHost(
@@ -27,6 +28,9 @@ fun AppNavHost(
         }
         composable(Routes.SETTINGS) {
             SettingsScreen()
+        }
+        composable(Routes.SCHOLARS) {
+            ScholarsScreen()
         }
     }
 }
