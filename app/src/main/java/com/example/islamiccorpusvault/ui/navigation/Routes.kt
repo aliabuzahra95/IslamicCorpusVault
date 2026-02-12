@@ -5,6 +5,7 @@ object Routes {
     const val SCHOLARS = "scholars"
     const val LIBRARY = "library"
     const val SETTINGS = "settings"
+    const val CATEGORY = "category"
 
     // Detail
     const val SCHOLAR_DETAIL = "scholar_detail"
