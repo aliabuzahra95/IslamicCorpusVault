@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -50,8 +51,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.islamiccorpusvault.ui.navigation.AppNavHost
 import com.example.islamiccorpusvault.ui.navigation.Routes
 import com.example.islamiccorpusvault.ui.navigation.bottomNavItems
-
-
+import androidx.compose.foundation.layout.wrapContentWidth
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainShell() {
@@ -59,49 +59,84 @@ fun MainShell() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: Routes.HOME
 
+    // Top-level tabs are the ones in the bottom navigation.
+    val topLevelRoutes = remember { bottomNavItems.map { it.route }.toSet() }
+    val isTopLevel = currentRoute in topLevelRoutes
+
+    val canGoBack = navController.previousBackStackEntry != null
+
+    // Title per route (keep simple; detail screens can refine later)
+    val titleText = when (currentRoute) {
+        Routes.HOME -> "Islamic Corpus Vault"
+        Routes.SCHOLARS -> "Scholars"
+        Routes.LIBRARY -> "Library"
+        Routes.SETTINGS -> "Settings"
+        else -> "Details"
+    }
     var showQuickCreate by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
+                navigationIcon = {
+                    if (!isTopLevel && canGoBack) {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    }
+                },
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Outlined.AutoStories,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                                .padding(6.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)
+                    ) {
+                        // Show the app mark only on the Home tab
+                        if (currentRoute == Routes.HOME) {
+                            Icon(
+                                imageVector = Icons.Outlined.AutoStories,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .size(26.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                    .padding(6.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                        }
+
                         Text(
-                            text = "Islamic Corpus Vault",
-                            style = MaterialTheme.typography.titleLarge,
+                            text = titleText,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = {
-                            navController.navigate(Routes.SETTINGS) {
-                                launchSingleTop = true
-                                restoreState = true
+                    // Keep Settings as a quick action only on top-level screens.
+                    if (isTopLevel) {
+                        IconButton(
+                            onClick = {
+                                navController.navigate(Routes.SETTINGS) {
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = "Settings"
+                            )
                         }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Settings"
-                        )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
                     actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )

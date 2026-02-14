@@ -1,8 +1,11 @@
 package com.example.islamiccorpusvault.ui.navigation
 
 import android.net.Uri
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -23,23 +26,14 @@ fun AppNavHost(
         startDestination = Routes.HOME,
         modifier = modifier
     ) {
+
+        // Main tabs
         composable(Routes.HOME) { HomeScreen() }
         composable(Routes.LIBRARY) { LibraryScreen() }
-        composable(Routes.SETTINGS) { SettingsScreen() }
         composable(Routes.SCHOLARS) { ScholarsScreen(navController) }
+        composable(Routes.SETTINGS) { SettingsScreen() }
 
-        composable(route = "${Routes.CATEGORY}/{scholarName}/{categoryName}") { backStackEntry ->
-            val scholarName = Uri.decode(backStackEntry.arguments?.getString("scholarName") ?: "")
-            val categoryName = Uri.decode(backStackEntry.arguments?.getString("categoryName") ?: "")
-
-            CategoryScreen(
-                scholarName = scholarName,
-                categoryName = categoryName,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        // ✅ IMPORTANT: this must EXACTLY match what we navigate to
+        // Scholar detail
         composable(route = "${Routes.SCHOLAR_DETAIL}/{id}/{name}") { backStackEntry ->
             val id = Uri.decode(backStackEntry.arguments?.getString("id") ?: "")
             val name = Uri.decode(backStackEntry.arguments?.getString("name") ?: "")
@@ -53,6 +47,37 @@ fun AppNavHost(
                         "${Routes.CATEGORY}/${Uri.encode(name)}/${Uri.encode(categoryName)}"
                     )
                 }
+            )
+        }
+
+        // Category screen
+        composable(route = "${Routes.CATEGORY}/{scholarName}/{categoryName}") { backStackEntry ->
+            val scholarName = Uri.decode(backStackEntry.arguments?.getString("scholarName") ?: "")
+            val categoryName = Uri.decode(backStackEntry.arguments?.getString("categoryName") ?: "")
+
+            CategoryScreen(
+                scholarName = scholarName,
+                categoryName = categoryName,
+                onCreateSubcategory = {
+                    // TODO next: navigate to a "CreateSubcategoryScreen"
+                    // For now, just do nothing
+                },
+                onCreateNote = {
+                    // TODO next: navigate to a "CreateNoteScreen" (direct note)
+                    // For now, just do nothing
+                }
+            )
+        }
+
+        // Temporary entries placeholder (so the app doesn't crash when you click a subcategory)
+        composable(route = "${Routes.ENTRY}/{scholarName}/{categoryName}/{subcategoryName}") { backStackEntry ->
+            val scholarName = Uri.decode(backStackEntry.arguments?.getString("scholarName") ?: "")
+            val categoryName = Uri.decode(backStackEntry.arguments?.getString("categoryName") ?: "")
+            val subcategoryName = Uri.decode(backStackEntry.arguments?.getString("subcategoryName") ?: "")
+
+            Text(
+                text = "Entries: $scholarName → $categoryName → $subcategoryName",
+                modifier = Modifier.padding(16.dp)
             )
         }
     }
