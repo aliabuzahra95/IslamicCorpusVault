@@ -21,11 +21,18 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        create("staging") {
+            initWith(getByName("release"))
+            signingConfig = getByName("debug").signingConfig
+            isDebuggable = false
+            matchingFallbacks += listOf("release")
         }
     }
     compileOptions {

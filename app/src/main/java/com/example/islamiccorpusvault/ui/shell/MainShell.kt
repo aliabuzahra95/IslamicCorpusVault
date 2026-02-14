@@ -66,11 +66,15 @@ fun MainShell() {
     val canGoBack = navController.previousBackStackEntry != null
 
     // Title per route (keep simple; detail screens can refine later)
-    val titleText = when (currentRoute) {
-        Routes.HOME -> "Islamic Corpus Vault"
-        Routes.SCHOLARS -> "Scholars"
-        Routes.LIBRARY -> "Library"
-        Routes.SETTINGS -> "Settings"
+    val titleText = when {
+        currentRoute == Routes.HOME -> "Islamic Corpus Vault"
+        currentRoute == Routes.SCHOLARS -> "Scholars"
+        currentRoute == Routes.LIBRARY -> "Library"
+        currentRoute == Routes.SETTINGS -> "Settings"
+        currentRoute == Routes.CATEGORY -> "Category"
+        currentRoute == Routes.SUBCATEGORY -> "Subcategory"
+        currentRoute == Routes.NOTE_DETAIL -> "Note"
+        currentRoute?.startsWith(Routes.SCHOLAR_DETAIL) == true -> "Scholar"
         else -> "Details"
     }
     var showQuickCreate by remember { mutableStateOf(false) }

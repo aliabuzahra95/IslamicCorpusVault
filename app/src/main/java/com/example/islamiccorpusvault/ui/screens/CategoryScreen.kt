@@ -3,8 +3,6 @@ package com.example.islamiccorpusvault.ui.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,7 +53,9 @@ fun CategoryScreen(
     scholarName: String,
     categoryName: String,
     onCreateSubcategory: () -> Unit,
-    onCreateNote: () -> Unit
+    onCreateNote: () -> Unit,
+    onSubcategoryClick: (subcategoryId: String, subcategoryName: String) -> Unit,
+    onNoteClick: (noteId: String, title: String, body: String, citation: String) -> Unit
 ) {
     var showSheet by remember { mutableStateOf(false) }
     var sheetMode by remember { mutableStateOf(SheetMode.ACTIONS) }
@@ -118,10 +118,10 @@ fun CategoryScreen(
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            items(subcategories) { sc ->
+                            items(items = subcategories, key = { it.id }) { sc ->
                                 SubcategoryPill(
                                     name = sc.name,
-                                    onClick = { /* later: open subcategory */ }
+                                    onClick = { onSubcategoryClick(sc.id, sc.name) }
                                 )
                             }
                         }
@@ -148,12 +148,12 @@ fun CategoryScreen(
                         )
                     }
                 } else {
-                    items(notes) { note ->
+                    items(items = notes, key = { it.id }) { note ->
                         NoteCard(
                             title = note.title,
                             body = note.body,
                             citation = note.citation,
-                            onClick = { /* later: open note detail */ }
+                            onClick = { onNoteClick(note.id, note.title, note.body, note.citation) }
                         )
                         Spacer(Modifier.height(10.dp))
                     }
