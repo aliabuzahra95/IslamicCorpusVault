@@ -12,6 +12,6 @@ object Routes {
 
     const val CATEGORY = "category/{scholarName}/{categoryName}"
     const val SUBCATEGORY = "subcategory/{scholarName}/{categoryName}/{subcategoryId}/{subcategoryName}"
-    const val NOTE_DETAIL = "note_detail?noteId={noteId}&title={title}&body={body}&citation={citation}"
-    const val NOTE_EDITOR = "note_editor?noteId={noteId}&title={title}&body={body}&citation={citation}"
+    const val NOTE_DETAIL = "note_detail/{noteId}"
+    const val NOTE_EDITOR = "note_editor/{noteId}"
 }

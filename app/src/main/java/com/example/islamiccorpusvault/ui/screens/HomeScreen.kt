@@ -41,6 +41,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,7 +57,7 @@ import com.example.islamiccorpusvault.ui.components.MoveCategory
 import com.example.islamiccorpusvault.ui.components.MoveScholar
 import com.example.islamiccorpusvault.ui.components.NoteActionSheet
 import com.example.islamiccorpusvault.ui.model.AppNote
-import com.example.islamiccorpusvault.ui.model.NoteStore
+import com.example.islamiccorpusvault.data.di.AppContainer
 import kotlinx.coroutines.launch
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -64,18 +65,16 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     onOpenGeneralNotes: () -> Unit = {},
     onOpenScholars: () -> Unit = {},
-    onOpenNoteDetail: (title: String, body: String, citation: String) -> Unit = { _, _, _ -> }
+    onOpenNoteDetail: (noteId: String) -> Unit = {},
+    onOpenNoteEditor: (noteId: String) -> Unit = {}
 ) {
     var query by remember { mutableStateOf("") }
-    var showCreateSheet by remember { mutableStateOf(false) }
-    var newNoteTitle by remember { mutableStateOf("") }
-    var newNoteBody by remember { mutableStateOf("") }
-    var newNoteCitation by remember { mutableStateOf("") }
     var selectedNoteId by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val notesRepository = AppContainer.notesRepository
 
-    val recentNotes = NoteStore.notes
+    val recentNotes by notesRepository.observeAll().collectAsState(initial = emptyList())
 
     val selectedNote = selectedNoteId?.let { id -> recentNotes.firstOrNull { it.id == id } }
 
@@ -126,7 +125,22 @@ fun HomeScreen(
 
         item {
             QuickActions(
-                onCreateNote = { showCreateSheet = true },
+                onCreateNote = {
+                    val noteId = System.currentTimeMillis().toString()
+                    scope.launch {
+                        notesRepository.upsert(
+                            AppNote(
+                                id = noteId,
+                                title = "Untitled",
+                                preview = "",
+                                citation = "",
+                                isPinned = false,
+                                container = "General Notes"
+                            )
+                        )
+                    }
+                    onOpenNoteEditor(noteId)
+                },
                 onCreateScholar = onOpenScholars,
                 onPinned = { scope.launch { listState.animateScrollToItem(index = pinnedHeaderIndex) } }
             )
@@ -148,7 +162,7 @@ fun HomeScreen(
                 HomeNoteCard(
                     note = note,
                     onContainerClick = { if (note.container == "General Notes") onOpenGeneralNotes() },
-                    onClick = { onOpenNoteDetail(note.title, note.preview, note.citation) },
+                    onClick = { onOpenNoteDetail(note.id) },
                     onLongPress = { selectedNoteId = note.id }
                 )
             }
@@ -171,90 +185,13 @@ fun HomeScreen(
                 HomeNoteCard(
                     note = note,
                     onContainerClick = { if (note.container == "General Notes") onOpenGeneralNotes() },
-                    onClick = { onOpenNoteDetail(note.title, note.preview, note.citation) },
+                    onClick = { onOpenNoteDetail(note.id) },
                     onLongPress = { selectedNoteId = note.id }
                 )
             }
         }
 
         item { Spacer(Modifier.height(20.dp)) }
-    }
-
-    if (showCreateSheet) {
-        ModalBottomSheet(onDismissRequest = { showCreateSheet = false }) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .imePadding()
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-            ) {
-                Text("New note", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = newNoteTitle,
-                    onValueChange = { newNoteTitle = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    placeholder = { Text("Title") }
-                )
-
-                Spacer(Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = newNoteBody,
-                    onValueChange = { newNoteBody = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 3,
-                    placeholder = { Text("Body text") }
-                )
-
-                Spacer(Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = newNoteCitation,
-                    onValueChange = { newNoteCitation = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 2,
-                    placeholder = { Text("Citation (optional)") }
-                )
-
-                Spacer(Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = { showCreateSheet = false }) { Text("Cancel") }
-                    Spacer(Modifier.width(6.dp))
-                    Button(
-                        onClick = {
-                            val title = newNoteTitle.trim()
-                            val body = newNoteBody.trim()
-                            if (title.isNotEmpty() || body.isNotEmpty()) {
-                                recentNotes.add(
-                                    0,
-                                    AppNote(
-                                        id = System.currentTimeMillis().toString(),
-                                        title = if (title.isNotEmpty()) title else "Untitled",
-                                        preview = body,
-                                        citation = newNoteCitation.trim(),
-                                        isPinned = false,
-                                        container = "General Notes"
-                                    )
-                                )
-                                newNoteTitle = ""
-                                newNoteBody = ""
-                                newNoteCitation = ""
-                                showCreateSheet = false
-                            }
-                        }
-                    ) { Text("Create") }
-                }
-
-                Spacer(Modifier.height(10.dp))
-            }
-        }
     }
 
     if (selectedNote != null) {
@@ -279,28 +216,19 @@ fun HomeScreen(
             ),
             onDismiss = { selectedNoteId = null },
             onTogglePin = {
-                val index = recentNotes.indexOfFirst { it.id == selectedNote.id }
-                if (index >= 0) {
-                    recentNotes[index] = recentNotes[index].copy(isPinned = !recentNotes[index].isPinned)
-                }
+                scope.launch { notesRepository.togglePin(selectedNote.id) }
                 selectedNoteId = null
             },
             onMoveToGeneral = {
-                val index = recentNotes.indexOfFirst { it.id == selectedNote.id }
-                if (index >= 0) {
-                    recentNotes[index] = recentNotes[index].copy(container = "General Notes")
-                }
+                scope.launch { notesRepository.move(selectedNote.id, "General Notes") }
                 selectedNoteId = null
             },
             onMoveToDestination = { destination ->
-                val index = recentNotes.indexOfFirst { it.id == selectedNote.id }
-                if (index >= 0) {
-                    recentNotes[index] = recentNotes[index].copy(container = destination)
-                }
+                scope.launch { notesRepository.move(selectedNote.id, destination) }
                 selectedNoteId = null
             },
             onDelete = {
-                recentNotes.removeAll { it.id == selectedNote.id }
+                scope.launch { notesRepository.deleteById(selectedNote.id) }
                 selectedNoteId = null
             }
         )

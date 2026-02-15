@@ -17,12 +17,12 @@ import com.example.islamiccorpusvault.ui.screens.ScholarsScreen
 import com.example.islamiccorpusvault.ui.screens.SettingsScreen
 import com.example.islamiccorpusvault.ui.screens.SubcategoryScreen
 
-private fun noteDetailRoute(noteId: String, title: String, body: String, citation: String): String {
-    return "note_detail?noteId=${Uri.encode(noteId)}&title=${Uri.encode(title)}&body=${Uri.encode(body)}&citation=${Uri.encode(citation)}"
+private fun noteDetailRoute(noteId: String): String {
+    return "note_detail/${Uri.encode(noteId)}"
 }
 
-private fun noteEditorRoute(noteId: String, title: String, body: String, citation: String): String {
-    return "note_editor?noteId=${Uri.encode(noteId)}&title=${Uri.encode(title)}&body=${Uri.encode(body)}&citation=${Uri.encode(citation)}"
+private fun noteEditorRoute(noteId: String): String {
+    return "note_editor/${Uri.encode(noteId)}"
 }
 
 @Composable
@@ -39,16 +39,14 @@ fun AppNavHost(
             HomeScreen(
                 onOpenScholars = { navController.navigate(Routes.SCHOLARS) },
                 onOpenGeneralNotes = { navController.navigate(Routes.GENERAL_NOTES) },
-                onOpenNoteDetail = { title, body, citation ->
-                    navController.navigate(noteDetailRoute("home", title, body, citation))
-                }
+                onOpenNoteDetail = { noteId -> navController.navigate(noteDetailRoute(noteId)) },
+                onOpenNoteEditor = { noteId -> navController.navigate(noteEditorRoute(noteId)) }
             )
         }
         composable(Routes.GENERAL_NOTES) {
             GeneralNotesScreen(
-                onNoteClick = { title, body, citation ->
-                    navController.navigate(noteDetailRoute("general", title, body, citation))
-                }
+                onNoteClick = { noteId -> navController.navigate(noteDetailRoute(noteId)) },
+                onCreateNote = { noteId -> navController.navigate(noteEditorRoute(noteId)) }
             )
         }
         composable(Routes.LIBRARY) {
@@ -83,15 +81,13 @@ fun AppNavHost(
                 scholarName = scholarName,
                 categoryName = categoryName,
                 onCreateSubcategory = { },
-                onCreateNote = { },
                 onSubcategoryClick = { subcategoryId, subcategoryName ->
                     navController.navigate(
                         "subcategory/${Uri.encode(scholarName)}/${Uri.encode(categoryName)}/${Uri.encode(subcategoryId)}/${Uri.encode(subcategoryName)}"
                     )
                 },
-                onNoteClick = { noteId, title, body, citation ->
-                    navController.navigate(noteDetailRoute(noteId, title, body, citation))
-                }
+                onNoteClick = { noteId -> navController.navigate(noteDetailRoute(noteId)) },
+                onCreateNote = { noteId -> navController.navigate(noteEditorRoute(noteId)) }
             )
         }
 
@@ -104,41 +100,28 @@ fun AppNavHost(
                 scholarName = scholarName,
                 categoryName = categoryName,
                 subcategoryName = subcategoryName,
-                onNoteClick = { noteId, title, body, citation ->
-                    navController.navigate(noteDetailRoute(noteId, title, body, citation))
-                }
+                onNoteClick = { noteId -> navController.navigate(noteDetailRoute(noteId)) },
+                onCreateNote = { noteId -> navController.navigate(noteEditorRoute(noteId)) }
             )
         }
 
         composable(route = Routes.NOTE_DETAIL) { backStackEntry ->
             val noteId = Uri.decode(backStackEntry.arguments?.getString("noteId") ?: "")
-            val title = Uri.decode(backStackEntry.arguments?.getString("title") ?: "")
-            val body = Uri.decode(backStackEntry.arguments?.getString("body") ?: "")
-            val citation = Uri.decode(backStackEntry.arguments?.getString("citation") ?: "")
 
             NoteDetailScreen(
-                title = title,
-                body = body,
-                citation = citation,
-                onEdit = {
-                    navController.navigate(noteEditorRoute(noteId, title, body, citation))
-                }
+                noteId = noteId,
+                onEdit = { navController.navigate(noteEditorRoute(noteId)) }
             )
         }
 
         composable(route = Routes.NOTE_EDITOR) { backStackEntry ->
             val noteId = Uri.decode(backStackEntry.arguments?.getString("noteId") ?: "")
-            val title = Uri.decode(backStackEntry.arguments?.getString("title") ?: "")
-            val body = Uri.decode(backStackEntry.arguments?.getString("body") ?: "")
-            val citation = Uri.decode(backStackEntry.arguments?.getString("citation") ?: "")
 
             NoteEditorScreen(
-                initialTitle = title,
-                initialBody = body,
-                initialCitation = citation,
+                noteId = noteId,
                 onCancel = { navController.popBackStack() },
-                onSave = { updatedTitle, updatedBody, updatedCitation ->
-                    navController.navigate(noteDetailRoute(noteId, updatedTitle, updatedBody, updatedCitation)) {
+                onSave = {
+                    navController.navigate(noteDetailRoute(noteId)) {
                         popUpTo(Routes.NOTE_EDITOR) { inclusive = true }
                         launchSingleTop = true
                     }

@@ -64,6 +64,14 @@ fun MainShell() {
     val isTopLevel = currentRoute in topLevelRoutes
 
     val canGoBack = navController.previousBackStackEntry != null
+    val hideShellTopBar = currentRoute == Routes.NOTE_EDITOR
+    val scholarFlowRoutes = setOf(
+        Routes.SCHOLARS,
+        Routes.CATEGORY,
+        Routes.SUBCATEGORY
+    )
+    val inScholarFlow = (currentRoute in scholarFlowRoutes) ||
+        (currentRoute?.startsWith(Routes.SCHOLAR_DETAIL) == true)
 
     // Title per route (keep simple; detail screens can refine later)
     val titleText = when {
@@ -83,71 +91,73 @@ fun MainShell() {
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                navigationIcon = {
-                    if (!isTopLevel && canGoBack) {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                contentDescription = "Back"
-                            )
-                        }
-                    }
-                },
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)
-                    ) {
-                        // Show the app mark only on the Home tab
-                        if (currentRoute == Routes.HOME) {
-                            Icon(
-                                imageVector = Icons.Outlined.AutoStories,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier
-                                    .size(26.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                                    .padding(6.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                        }
-
-                        if (titleText.isNotBlank()) {
-                            Text(
-                                text = titleText,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    // Keep Settings as a quick action only on top-level screens.
-                    if (isTopLevel) {
-                        IconButton(
-                            onClick = {
-                                navController.navigate(Routes.SETTINGS) {
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+            if (!hideShellTopBar) {
+                CenterAlignedTopAppBar(
+                    navigationIcon = {
+                        if (!isTopLevel && canGoBack) {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                                    contentDescription = "Back"
+                                )
                             }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Settings,
-                                contentDescription = "Settings"
-                            )
                         }
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)
+                        ) {
+                            // Show the app mark only on the Home tab
+                            if (currentRoute == Routes.HOME) {
+                                Icon(
+                                    imageVector = Icons.Outlined.AutoStories,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .size(26.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                        .padding(6.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                            }
+
+                            if (titleText.isNotBlank()) {
+                                Text(
+                                    text = titleText,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    },
+                    actions = {
+                        // Keep Settings as a quick action only on top-level screens.
+                        if (isTopLevel) {
+                            IconButton(
+                                onClick = {
+                                    navController.navigate(Routes.SETTINGS) {
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Settings,
+                                    contentDescription = "Settings"
+                                )
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 )
-            )
+            }
         },
         floatingActionButton = {
             if (currentRoute == Routes.HOME) {
@@ -175,7 +185,10 @@ fun MainShell() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     bottomNavItems.forEach { item ->
-                        val selected = currentRoute == item.route
+                        val selected = when (item.route) {
+                            Routes.SCHOLARS -> inScholarFlow
+                            else -> currentRoute == item.route
+                        }
                         val interaction = remember { MutableInteractionSource() }
 
                         // Selected item gets a soft pill background (no ripple overlay)

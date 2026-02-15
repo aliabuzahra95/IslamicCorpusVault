@@ -35,30 +35,26 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.example.islamiccorpusvault.data.di.AppContainer
 import com.example.islamiccorpusvault.ui.components.MoveCategory
 import com.example.islamiccorpusvault.ui.components.MoveScholar
 import com.example.islamiccorpusvault.ui.components.NoteActionSheet
+import com.example.islamiccorpusvault.ui.model.AppNote
+import kotlinx.coroutines.launch
 
 private data class SubcategoryItem(val id: String, val name: String)
-private data class NoteItem(
-    val id: String,
-    val title: String,
-    val body: String,
-    val citation: String,
-    val isPinned: Boolean = false,
-    val container: String = "General Notes"
-)
-
-private enum class SheetMode { ACTIONS, NEW_SUBCATEGORY, NEW_NOTE }
+private enum class SheetMode { ACTIONS, NEW_SUBCATEGORY }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,21 +62,20 @@ fun CategoryScreen(
     scholarName: String,
     categoryName: String,
     onCreateSubcategory: () -> Unit,
-    onCreateNote: () -> Unit,
+    onCreateNote: (noteId: String) -> Unit,
     onSubcategoryClick: (subcategoryId: String, subcategoryName: String) -> Unit,
-    onNoteClick: (noteId: String, title: String, body: String, citation: String) -> Unit
+    onNoteClick: (noteId: String) -> Unit
 ) {
     var showSheet by remember { mutableStateOf(false) }
     var sheetMode by remember { mutableStateOf(SheetMode.ACTIONS) }
+    val notesRepository = AppContainer.notesRepository
+    val scope = rememberCoroutineScope()
 
     val subcategories = remember { mutableStateListOf<SubcategoryItem>() }
-    val notes = remember { mutableStateListOf<NoteItem>() }
+    val notes by notesRepository.observeByContainer(categoryName).collectAsState(initial = emptyList())
 
     // form state
     var newSubcategoryName by remember { mutableStateOf("") }
-    var newNoteTitle by remember { mutableStateOf("") }
-    var newNoteBody by remember { mutableStateOf("") }
-    var newNoteCitation by remember { mutableStateOf("") }
     var selectedNoteId by remember { mutableStateOf<String?>(null) }
     val selectedNote = selectedNoteId?.let { id -> notes.firstOrNull { it.id == id } }
 
@@ -166,11 +161,11 @@ fun CategoryScreen(
                     items(items = notes, key = { it.id }) { note ->
                         NoteCard(
                             title = note.title,
-                            body = note.body,
+                            body = note.preview,
                             citation = note.citation,
                             isPinned = note.isPinned,
                             container = note.container,
-                            onClick = { onNoteClick(note.id, note.title, note.body, note.citation) },
+                            onClick = { onNoteClick(note.id) },
                             onLongPress = { selectedNoteId = note.id }
                         )
                         Spacer(Modifier.height(10.dp))
@@ -236,10 +231,24 @@ fun CategoryScreen(
 
                         TelegramSheetRow(
                             title = "Note",
-                            subtitle = "Write directly here",
+                            subtitle = "Open dedicated editor",
                             icon = Icons.Outlined.NoteAdd,
                             onClick = {
-                                sheetMode = SheetMode.NEW_NOTE
+                                val noteId = System.currentTimeMillis().toString()
+                                scope.launch {
+                                    notesRepository.upsert(
+                                        AppNote(
+                                            id = noteId,
+                                            title = "Untitled",
+                                            preview = "",
+                                            citation = "",
+                                            isPinned = false,
+                                            container = categoryName
+                                        )
+                                    )
+                                }
+                                showSheet = false
+                                onCreateNote(noteId)
                             }
                         )
 
@@ -296,92 +305,6 @@ fun CategoryScreen(
                         Spacer(Modifier.height(10.dp))
                     }
                 }
-
-                SheetMode.NEW_NOTE -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .imePadding()
-                            .padding(horizontal = 14.dp, vertical = 10.dp)
-                    ) {
-                        Text("New note", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(10.dp))
-
-                        OutlinedTextField(
-                            value = newNoteTitle,
-                            onValueChange = { newNoteTitle = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            placeholder = { Text("Title") },
-                            shape = RoundedCornerShape(14.dp),
-                            colors = OutlinedTextFieldDefaults.colors()
-                        )
-
-                        Spacer(Modifier.height(10.dp))
-
-                        OutlinedTextField(
-                            value = newNoteBody,
-                            onValueChange = { newNoteBody = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 3,
-                            placeholder = { Text("Body text") },
-                            shape = RoundedCornerShape(14.dp),
-                            colors = OutlinedTextFieldDefaults.colors()
-                        )
-
-                        Spacer(Modifier.height(10.dp))
-
-                        OutlinedTextField(
-                            value = newNoteCitation,
-                            onValueChange = { newNoteCitation = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 2,
-                            placeholder = { Text("Citation (optional)") },
-                            shape = RoundedCornerShape(14.dp),
-                            colors = OutlinedTextFieldDefaults.colors()
-                        )
-
-                        Spacer(Modifier.height(12.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            TextButton(
-                                onClick = { sheetMode = SheetMode.ACTIONS }
-                            ) { Text("Back") }
-
-                            Spacer(Modifier.width(6.dp))
-
-                            Button(
-                                onClick = {
-                                    val t = newNoteTitle.trim()
-                                    val b = newNoteBody.trim()
-                                    if (t.isNotEmpty() || b.isNotEmpty()) {
-                                        notes.add(
-                                            NoteItem(
-                                                id = System.currentTimeMillis().toString(),
-                                                title = if (t.isNotEmpty()) t else "Untitled",
-                                                body = b,
-                                                citation = newNoteCitation.trim(),
-                                                isPinned = false,
-                                                container = "General Notes"
-                                            )
-                                        )
-                                        newNoteTitle = ""
-                                        newNoteBody = ""
-                                        newNoteCitation = ""
-                                        showSheet = false
-                                        sheetMode = SheetMode.ACTIONS
-                                        onCreateNote()
-                                    }
-                                }
-                            ) { Text("Create") }
-                        }
-
-                        Spacer(Modifier.height(10.dp))
-                    }
-                }
             }
         }
     }
@@ -403,22 +326,19 @@ fun CategoryScreen(
             ),
             onDismiss = { selectedNoteId = null },
             onTogglePin = {
-                val index = notes.indexOfFirst { it.id == selectedNote.id }
-                if (index >= 0) notes[index] = notes[index].copy(isPinned = !notes[index].isPinned)
+                scope.launch { notesRepository.togglePin(selectedNote.id) }
                 selectedNoteId = null
             },
             onMoveToGeneral = {
-                val index = notes.indexOfFirst { it.id == selectedNote.id }
-                if (index >= 0) notes[index] = notes[index].copy(container = "General Notes")
+                scope.launch { notesRepository.move(selectedNote.id, "General Notes") }
                 selectedNoteId = null
             },
             onMoveToDestination = { destination ->
-                val index = notes.indexOfFirst { it.id == selectedNote.id }
-                if (index >= 0) notes[index] = notes[index].copy(container = destination)
+                scope.launch { notesRepository.move(selectedNote.id, destination) }
                 selectedNoteId = null
             },
             onDelete = {
-                notes.removeAll { it.id == selectedNote.id }
+                scope.launch { notesRepository.deleteById(selectedNote.id) }
                 selectedNoteId = null
             }
         )
