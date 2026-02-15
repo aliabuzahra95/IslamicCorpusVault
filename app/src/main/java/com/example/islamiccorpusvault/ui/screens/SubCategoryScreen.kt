@@ -1,6 +1,7 @@
 package com.example.islamiccorpusvault.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -16,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -36,12 +39,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.example.islamiccorpusvault.ui.components.MoveCategory
+import com.example.islamiccorpusvault.ui.components.MoveScholar
+import com.example.islamiccorpusvault.ui.components.NoteActionSheet
 
 private data class SubcategoryNote(
     val id: String,
     val title: String,
     val body: String,
-    val citation: String
+    val citation: String,
+    val isPinned: Boolean = false,
+    val container: String = "General Notes"
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,6 +62,8 @@ fun SubcategoryScreen(
 ) {
     val notes = remember { mutableStateListOf<SubcategoryNote>() }
     var showSheet by remember { mutableStateOf(false) }
+    var selectedNoteId by remember { mutableStateOf<String?>(null) }
+    val selectedNote = selectedNoteId?.let { id -> notes.firstOrNull { it.id == id } }
 
     var newNoteTitle by remember { mutableStateOf("") }
     var newNoteBody by remember { mutableStateOf("") }
@@ -114,7 +124,10 @@ fun SubcategoryScreen(
                             title = note.title,
                             body = note.body,
                             citation = note.citation,
-                            onClick = { onNoteClick(note.id, note.title, note.body, note.citation) }
+                            isPinned = note.isPinned,
+                            container = note.container,
+                            onClick = { onNoteClick(note.id, note.title, note.body, note.citation) },
+                            onLongPress = { selectedNoteId = note.id }
                         )
                     }
                 }
@@ -127,6 +140,7 @@ fun SubcategoryScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .imePadding()
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 Text("New note", style = MaterialTheme.typography.titleMedium)
@@ -182,7 +196,9 @@ fun SubcategoryScreen(
                                         id = System.currentTimeMillis().toString(),
                                         title = if (title.isNotEmpty()) title else "Untitled",
                                         body = body,
-                                        citation = newNoteCitation.trim()
+                                        citation = newNoteCitation.trim(),
+                                        isPinned = false,
+                                        container = "General Notes"
                                     )
                                 )
                                 newNoteTitle = ""
@@ -200,14 +216,56 @@ fun SubcategoryScreen(
             }
         }
     }
+
+    if (selectedNote != null) {
+        NoteActionSheet(
+            title = selectedNote.title,
+            isPinned = selectedNote.isPinned,
+            moveTree = listOf(
+                MoveScholar(
+                    name = scholarName,
+                    categories = listOf(
+                        MoveCategory(
+                            name = categoryName,
+                            subcategories = listOf(subcategoryName)
+                        )
+                    )
+                )
+            ),
+            onDismiss = { selectedNoteId = null },
+            onTogglePin = {
+                val index = notes.indexOfFirst { it.id == selectedNote.id }
+                if (index >= 0) notes[index] = notes[index].copy(isPinned = !notes[index].isPinned)
+                selectedNoteId = null
+            },
+            onMoveToGeneral = {
+                val index = notes.indexOfFirst { it.id == selectedNote.id }
+                if (index >= 0) notes[index] = notes[index].copy(container = "General Notes")
+                selectedNoteId = null
+            },
+            onMoveToDestination = { destination ->
+                val index = notes.indexOfFirst { it.id == selectedNote.id }
+                if (index >= 0) notes[index] = notes[index].copy(container = destination)
+                selectedNoteId = null
+            },
+            onDelete = {
+                notes.removeAll { it.id == selectedNote.id }
+                selectedNoteId = null
+            }
+        )
+    }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SubcategoryNoteCard(
     title: String,
     body: String,
     citation: String,
-    onClick: () -> Unit
+    isPinned: Boolean,
+    container: String,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit
 ) {
     Surface(
         shape = RoundedCornerShape(18.dp),
@@ -215,10 +273,22 @@ private fun SubcategoryNoteCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .clickable { onClick() }
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongPress
+            )
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            Text(text = title, style = MaterialTheme.typography.titleSmall)
+            Row {
+                Text(text = title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                if (isPinned) {
+                    Icon(
+                        imageVector = Icons.Outlined.PushPin,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
             if (body.isNotBlank()) {
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -241,6 +311,12 @@ private fun SubcategoryNoteCard(
                     )
                 }
             }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = container,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

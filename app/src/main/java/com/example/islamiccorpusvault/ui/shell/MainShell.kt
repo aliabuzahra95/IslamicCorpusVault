@@ -68,12 +68,14 @@ fun MainShell() {
     // Title per route (keep simple; detail screens can refine later)
     val titleText = when {
         currentRoute == Routes.HOME -> "Islamic Corpus Vault"
+        currentRoute == Routes.GENERAL_NOTES -> "General Notes"
         currentRoute == Routes.SCHOLARS -> "Scholars"
         currentRoute == Routes.LIBRARY -> "Library"
         currentRoute == Routes.SETTINGS -> "Settings"
         currentRoute == Routes.CATEGORY -> "Category"
         currentRoute == Routes.SUBCATEGORY -> "Subcategory"
-        currentRoute == Routes.NOTE_DETAIL -> "Note"
+        currentRoute == Routes.NOTE_DETAIL -> ""
+        currentRoute == Routes.NOTE_EDITOR -> ""
         currentRoute?.startsWith(Routes.SCHOLAR_DETAIL) == true -> "Scholar"
         else -> "Details"
     }
@@ -112,11 +114,13 @@ fun MainShell() {
                             Spacer(modifier = Modifier.width(10.dp))
                         }
 
-                        Text(
-                            text = titleText,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        if (titleText.isNotBlank()) {
+                            Text(
+                                text = titleText,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 },
                 actions = {

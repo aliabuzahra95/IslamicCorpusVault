@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,7 +42,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,20 +52,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.islamiccorpusvault.ui.components.MoveCategory
+import com.example.islamiccorpusvault.ui.components.MoveScholar
+import com.example.islamiccorpusvault.ui.components.NoteActionSheet
+import com.example.islamiccorpusvault.ui.model.AppNote
+import com.example.islamiccorpusvault.ui.model.NoteStore
 import kotlinx.coroutines.launch
-
-private data class HomeNote(
-    val id: String,
-    val title: String,
-    val preview: String,
-    val citation: String,
-    val isPinned: Boolean,
-    val container: String = "General Notes"
-)
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    onOpenGeneralNotes: () -> Unit = {},
     onOpenScholars: () -> Unit = {},
     onOpenNoteDetail: (title: String, body: String, citation: String) -> Unit = { _, _, _ -> }
 ) {
@@ -74,37 +71,13 @@ fun HomeScreen(
     var newNoteTitle by remember { mutableStateOf("") }
     var newNoteBody by remember { mutableStateOf("") }
     var newNoteCitation by remember { mutableStateOf("") }
+    var selectedNoteId by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
-    val recentNotes = remember {
-        mutableStateListOf(
-            HomeNote(
-                id = "home_1",
-                title = "Tawheed and intention",
-                preview = "Actions are judged by intentions and sincerity before knowledge.",
-                citation = "Bukhari 1",
-                isPinned = true,
-                container = "General Notes"
-            ),
-            HomeNote(
-                id = "home_2",
-                title = "Seeking beneficial knowledge",
-                preview = "Small consistent lessons are better than occasional overload.",
-                citation = "Ibn al-Qayyim",
-                isPinned = false,
-                container = "General Notes"
-            ),
-            HomeNote(
-                id = "home_3",
-                title = "Sabr in hardship",
-                preview = "Patience is active worship, not passive waiting.",
-                citation = "Quran 2:153",
-                isPinned = false,
-                container = "General Notes"
-            )
-        )
-    }
+    val recentNotes = NoteStore.notes
+
+    val selectedNote = selectedNoteId?.let { id -> recentNotes.firstOrNull { it.id == id } }
 
     val filtered = if (query.isBlank()) {
         recentNotes
@@ -174,8 +147,9 @@ fun HomeScreen(
             items(items = filtered.take(3), key = { "recent_${it.id}" }) { note ->
                 HomeNoteCard(
                     note = note,
+                    onContainerClick = { if (note.container == "General Notes") onOpenGeneralNotes() },
                     onClick = { onOpenNoteDetail(note.title, note.preview, note.citation) },
-                    onLongPress = { }
+                    onLongPress = { selectedNoteId = note.id }
                 )
             }
         }
@@ -196,8 +170,9 @@ fun HomeScreen(
             items(items = pinned, key = { "pinned_${it.id}" }) { note ->
                 HomeNoteCard(
                     note = note,
+                    onContainerClick = { if (note.container == "General Notes") onOpenGeneralNotes() },
                     onClick = { onOpenNoteDetail(note.title, note.preview, note.citation) },
-                    onLongPress = { }
+                    onLongPress = { selectedNoteId = note.id }
                 )
             }
         }
@@ -210,6 +185,7 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .imePadding()
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 Text("New note", style = MaterialTheme.typography.titleMedium)
@@ -258,7 +234,7 @@ fun HomeScreen(
                             if (title.isNotEmpty() || body.isNotEmpty()) {
                                 recentNotes.add(
                                     0,
-                                    HomeNote(
+                                    AppNote(
                                         id = System.currentTimeMillis().toString(),
                                         title = if (title.isNotEmpty()) title else "Untitled",
                                         preview = body,
@@ -279,6 +255,55 @@ fun HomeScreen(
                 Spacer(Modifier.height(10.dp))
             }
         }
+    }
+
+    if (selectedNote != null) {
+        NoteActionSheet(
+            title = selectedNote.title,
+            isPinned = selectedNote.isPinned,
+            moveTree = listOf(
+                MoveScholar(
+                    name = "Ibn Taymiyyah",
+                    categories = listOf(
+                        MoveCategory("Aqeedah", listOf("Asma wa Sifat", "Tawheed")),
+                        MoveCategory("Fiqh", listOf("Taharah", "Salah"))
+                    )
+                ),
+                MoveScholar(
+                    name = "Ibn al-Qayyim",
+                    categories = listOf(
+                        MoveCategory("Books", listOf("Madarij", "Zad al-Maad")),
+                        MoveCategory("Quotes", listOf("Heart", "Patience"))
+                    )
+                )
+            ),
+            onDismiss = { selectedNoteId = null },
+            onTogglePin = {
+                val index = recentNotes.indexOfFirst { it.id == selectedNote.id }
+                if (index >= 0) {
+                    recentNotes[index] = recentNotes[index].copy(isPinned = !recentNotes[index].isPinned)
+                }
+                selectedNoteId = null
+            },
+            onMoveToGeneral = {
+                val index = recentNotes.indexOfFirst { it.id == selectedNote.id }
+                if (index >= 0) {
+                    recentNotes[index] = recentNotes[index].copy(container = "General Notes")
+                }
+                selectedNoteId = null
+            },
+            onMoveToDestination = { destination ->
+                val index = recentNotes.indexOfFirst { it.id == selectedNote.id }
+                if (index >= 0) {
+                    recentNotes[index] = recentNotes[index].copy(container = destination)
+                }
+                selectedNoteId = null
+            },
+            onDelete = {
+                recentNotes.removeAll { it.id == selectedNote.id }
+                selectedNoteId = null
+            }
+        )
     }
 }
 
@@ -416,7 +441,8 @@ private fun SectionHeader(title: String, actionText: String, onAction: () -> Uni
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun HomeNoteCard(
-    note: HomeNote,
+    note: AppNote,
+    onContainerClick: () -> Unit,
     onClick: () -> Unit,
     onLongPress: () -> Unit
 ) {
@@ -471,7 +497,7 @@ private fun HomeNoteCard(
             }
             Spacer(Modifier.height(8.dp))
             AssistChip(
-                onClick = { },
+                onClick = onContainerClick,
                 label = { Text(note.container) }
             )
         }

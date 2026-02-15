@@ -2,6 +2,7 @@ package com.example.islamiccorpusvault.ui.navigation
 
 object Routes {
     const val HOME = "home"
+    const val GENERAL_NOTES = "general_notes"
     const val SCHOLARS = "scholars"
     const val LIBRARY = "library"
     const val SETTINGS = "settings"
@@ -12,4 +13,5 @@ object Routes {
     const val CATEGORY = "category/{scholarName}/{categoryName}"
     const val SUBCATEGORY = "subcategory/{scholarName}/{categoryName}/{subcategoryId}/{subcategoryName}"
     const val NOTE_DETAIL = "note_detail?noteId={noteId}&title={title}&body={body}&citation={citation}"
+    const val NOTE_EDITOR = "note_editor?noteId={noteId}&title={title}&body={body}&citation={citation}"
 }
