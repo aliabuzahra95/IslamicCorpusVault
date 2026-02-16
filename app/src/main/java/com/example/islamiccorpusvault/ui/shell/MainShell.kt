@@ -3,6 +3,7 @@ package com.example.islamiccorpusvault.ui.shell
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,27 +14,27 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AutoStories
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.AutoStories
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.Surface
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.Button
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +52,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.islamiccorpusvault.ui.navigation.AppNavHost
 import com.example.islamiccorpusvault.ui.navigation.Routes
 import com.example.islamiccorpusvault.ui.navigation.bottomNavItems
-import androidx.compose.foundation.layout.wrapContentWidth
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainShell() {
@@ -59,21 +60,22 @@ fun MainShell() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: Routes.HOME
 
+    // FULL SCREEN editor: hide top bar + bottom bar while editing
+    val isInEditor = currentRoute.startsWith(Routes.NOTE_EDITOR)
+
     // Top-level tabs are the ones in the bottom navigation.
     val topLevelRoutes = remember { bottomNavItems.map { it.route }.toSet() }
     val isTopLevel = currentRoute in topLevelRoutes
-
     val canGoBack = navController.previousBackStackEntry != null
-    val hideShellTopBar = currentRoute == Routes.NOTE_EDITOR
+
     val scholarFlowRoutes = setOf(
         Routes.SCHOLARS,
         Routes.CATEGORY,
         Routes.SUBCATEGORY
     )
-    val inScholarFlow = (currentRoute in scholarFlowRoutes) ||
-        (currentRoute?.startsWith(Routes.SCHOLAR_DETAIL) == true)
+    val inScholarFlow =
+        (currentRoute in scholarFlowRoutes) || currentRoute.startsWith(Routes.SCHOLAR_DETAIL)
 
-    // Title per route (keep simple; detail screens can refine later)
     val titleText = when {
         currentRoute == Routes.HOME -> "Islamic Corpus Vault"
         currentRoute == Routes.GENERAL_NOTES -> "General Notes"
@@ -83,15 +85,16 @@ fun MainShell() {
         currentRoute == Routes.CATEGORY -> "Category"
         currentRoute == Routes.SUBCATEGORY -> "Subcategory"
         currentRoute == Routes.NOTE_DETAIL -> ""
-        currentRoute == Routes.NOTE_EDITOR -> ""
-        currentRoute?.startsWith(Routes.SCHOLAR_DETAIL) == true -> "Scholar"
+        currentRoute.startsWith(Routes.NOTE_EDITOR) -> "" // editor has its own top bar
+        currentRoute.startsWith(Routes.SCHOLAR_DETAIL) -> "Scholar"
         else -> "Details"
     }
+
     var showQuickCreate by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
-            if (!hideShellTopBar) {
+            if (!isInEditor) {
                 CenterAlignedTopAppBar(
                     navigationIcon = {
                         if (!isTopLevel && canGoBack) {
@@ -108,7 +111,6 @@ fun MainShell() {
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)
                         ) {
-                            // Show the app mark only on the Home tab
                             if (currentRoute == Routes.HOME) {
                                 Icon(
                                     imageVector = Icons.Outlined.AutoStories,
@@ -133,7 +135,6 @@ fun MainShell() {
                         }
                     },
                     actions = {
-                        // Keep Settings as a quick action only on top-level screens.
                         if (isTopLevel) {
                             IconButton(
                                 onClick = {
@@ -160,84 +161,85 @@ fun MainShell() {
             }
         },
         floatingActionButton = {
-            if (currentRoute == Routes.HOME) {
+            if (!isInEditor && currentRoute == Routes.HOME) {
                 FloatingActionButton(onClick = { showQuickCreate = true }) {
                     Icon(imageVector = Icons.Outlined.Add, contentDescription = "Quick create")
                 }
             }
         },
         bottomBar = {
-            // Telegram-like compact, tactile pill bottom bar (compact + no cut-off)
-            Surface(
-                shape = RoundedCornerShape(22.dp),
-                tonalElevation = 0.dp,
-                color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp)
-                    .navigationBarsPadding()
-                    .padding(bottom = 8.dp)
-            ) {
-                Row(
+            if (!isInEditor) {
+                // Telegram-like compact pill bottom bar
+                Surface(
+                    shape = RoundedCornerShape(22.dp),
+                    tonalElevation = 0.dp,
+                    color = MaterialTheme.colorScheme.surface,
                     modifier = Modifier
-                        .height(60.dp)
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp)
+                        .navigationBarsPadding()
+                        .padding(bottom = 8.dp)
                 ) {
-                    bottomNavItems.forEach { item ->
-                        val selected = when (item.route) {
-                            Routes.SCHOLARS -> inScholarFlow
-                            else -> currentRoute == item.route
-                        }
-                        val interaction = remember { MutableInteractionSource() }
+                    Row(
+                        modifier = Modifier
+                            .height(60.dp)
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        bottomNavItems.forEach { item ->
+                            val selected = when (item.route) {
+                                Routes.SCHOLARS -> inScholarFlow
+                                else -> currentRoute == item.route
+                            }
+                            val interaction = remember { MutableInteractionSource() }
 
-                        // Selected item gets a soft pill background (no ripple overlay)
-                        val itemBg = if (selected) {
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                        } else {
-                            Color.Transparent
-                        }
+                            val itemBg = if (selected) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                            } else {
+                                Color.Transparent
+                            }
 
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(itemBg)
-                                .clickable(
-                                    interactionSource = interaction,
-                                    indication = null
-                                ) {
-                                    val poppedToTabRoot = navController.popBackStack(item.route, false)
-                                    if (!poppedToTabRoot) {
-                                        navController.navigate(item.route) {
-                                            popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                            launchSingleTop = true
-                                            restoreState = false
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(itemBg)
+                                    .clickable(
+                                        interactionSource = interaction,
+                                        indication = null
+                                    ) {
+                                        val poppedToTabRoot = navController.popBackStack(item.route, false)
+                                        if (!poppedToTabRoot) {
+                                            navController.navigate(item.route) {
+                                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                                launchSingleTop = true
+                                                restoreState = false
+                                            }
                                         }
                                     }
-                                }
-                                .padding(top = 6.dp, bottom = 5.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = item.icon,
-                                contentDescription = item.label,
-                                tint = if (selected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
+                                    .padding(top = 6.dp, bottom = 5.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = item.icon,
+                                    contentDescription = item.label,
+                                    tint = if (selected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
 
-                            Spacer(modifier = Modifier.height(3.dp))
+                                Spacer(modifier = Modifier.height(3.dp))
 
-                            Text(
-                                text = item.label,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (selected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 2.dp)
-                            )
+                                Text(
+                                    text = item.label,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (selected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(bottom = 2.dp)
+                                )
+                            }
                         }
                     }
                 }
