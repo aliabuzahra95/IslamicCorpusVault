@@ -18,9 +18,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.NoteAdd
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.NoteAdd
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,7 +37,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,15 +49,17 @@ import com.example.islamiccorpusvault.data.di.AppContainer
 import com.example.islamiccorpusvault.ui.components.MoveCategory
 import com.example.islamiccorpusvault.ui.components.MoveScholar
 import com.example.islamiccorpusvault.ui.components.NoteActionSheet
+import com.example.islamiccorpusvault.data.repo.ScholarSubcategory
 import com.example.islamiccorpusvault.ui.model.AppNote
+import com.example.islamiccorpusvault.ui.util.toPlainText
 import kotlinx.coroutines.launch
 
-private data class SubcategoryItem(val id: String, val name: String)
 private enum class SheetMode { ACTIONS, NEW_SUBCATEGORY }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryScreen(
+    scholarId: String,
     scholarName: String,
     categoryName: String,
     onCreateSubcategory: () -> Unit,
@@ -69,10 +70,11 @@ fun CategoryScreen(
     var showSheet by remember { mutableStateOf(false) }
     var sheetMode by remember { mutableStateOf(SheetMode.ACTIONS) }
     val notesRepository = AppContainer.notesRepository
+    val corpusRepository = AppContainer.corpusRepository
     val scope = rememberCoroutineScope()
 
-    val subcategories = remember { mutableStateListOf<SubcategoryItem>() }
     val notes by notesRepository.observeByContainer(categoryName).collectAsState(initial = emptyList())
+    val subcategories by corpusRepository.observeSubcategories(scholarId, categoryName).collectAsState(initial = emptyList())
 
     // form state
     var newSubcategoryName by remember { mutableStateOf("") }
@@ -161,7 +163,7 @@ fun CategoryScreen(
                     items(items = notes, key = { it.id }) { note ->
                         NoteCard(
                             title = note.title,
-                            body = note.preview,
+                            body = toPlainText(note.preview),
                             citation = note.citation,
                             isPinned = note.isPinned,
                             container = note.container,
@@ -232,7 +234,7 @@ fun CategoryScreen(
                         TelegramSheetRow(
                             title = "Note",
                             subtitle = "Open dedicated editor",
-                            icon = Icons.Outlined.NoteAdd,
+                            icon = Icons.AutoMirrored.Outlined.NoteAdd,
                             onClick = {
                                 val noteId = System.currentTimeMillis().toString()
                                 scope.launch {
@@ -292,7 +294,17 @@ fun CategoryScreen(
                                 onClick = {
                                     val name = newSubcategoryName.trim()
                                     if (name.isNotEmpty()) {
-                                        subcategories.add(SubcategoryItem(id = System.currentTimeMillis().toString(), name = name))
+                                        val id = "${scholarId}_${categoryName.lowercase().replace(" ", "_")}_${name.lowercase().replace(" ", "_")}_${System.currentTimeMillis()}"
+                                        scope.launch {
+                                            corpusRepository.upsertSubcategory(
+                                                ScholarSubcategory(
+                                                    id = id,
+                                                    scholarId = scholarId,
+                                                    categoryName = categoryName,
+                                                    name = name
+                                                )
+                                            )
+                                        }
                                         newSubcategoryName = ""
                                         showSheet = false
                                         sheetMode = SheetMode.ACTIONS

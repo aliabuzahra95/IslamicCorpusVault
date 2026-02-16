@@ -10,8 +10,8 @@ object Routes {
     // Detail
     const val SCHOLAR_DETAIL = "scholar_detail"
 
-    const val CATEGORY = "category/{scholarName}/{categoryName}"
-    const val SUBCATEGORY = "subcategory/{scholarName}/{categoryName}/{subcategoryId}/{subcategoryName}"
+    const val CATEGORY = "category/{scholarId}/{scholarName}/{categoryName}"
+    const val SUBCATEGORY = "subcategory/{scholarId}/{scholarName}/{categoryName}/{subcategoryId}/{subcategoryName}"
     const val NOTE_DETAIL = "note_detail/{noteId}"
     const val NOTE_EDITOR = "note_editor/{noteId}"
 }

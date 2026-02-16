@@ -18,6 +18,8 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -25,15 +27,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
+import com.example.islamiccorpusvault.data.di.AppContainer
+import com.example.islamiccorpusvault.data.repo.ScholarCategory
+import kotlinx.coroutines.launch
 
 @Composable
 fun ScholarDetailScreen(
@@ -42,18 +50,65 @@ fun ScholarDetailScreen(
     onBack: () -> Unit = {},
     onCategoryClick: (String) -> Unit
 ) {
-    // `id` is intentionally not shown in the UI (internal only)
     var query by remember { mutableStateOf("") }
+    var showNewCategory by remember { mutableStateOf(false) }
+    var newCategoryName by remember { mutableStateOf("") }
 
-    val categories = remember {
-        listOf(
-            "Aqeedah",
-            "Fiqh",
-            "Hadith",
-            "Books",
-            "Quotes",
-            "References",
-            "Misc"
+    val corpusRepository = AppContainer.corpusRepository
+    val scope = rememberCoroutineScope()
+    val categories by corpusRepository.observeCategoriesByScholar(id).collectAsState(initial = emptyList())
+
+    val filtered = if (query.isBlank()) categories else categories.filter {
+        it.name.contains(query, ignoreCase = true)
+    }
+
+    if (showNewCategory) {
+        AlertDialog(
+            onDismissRequest = { showNewCategory = false },
+            title = { Text("New category") },
+            text = {
+                OutlinedTextField(
+                    value = newCategoryName,
+                    onValueChange = { newCategoryName = it },
+                    singleLine = true,
+                    label = { Text("Category name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val clean = newCategoryName.trim()
+                        if (clean.isNotEmpty()) {
+                            val base = clean.lowercase().replace(" ", "_")
+                            var candidate = "${id}_${base}"
+                            var i = 2
+                            val existingIds = categories.map { it.id }.toSet()
+                            while (candidate in existingIds) {
+                                candidate = "${id}_${base}_${i}"
+                                i++
+                            }
+                            scope.launch {
+                                corpusRepository.upsertCategory(
+                                    ScholarCategory(
+                                        id = candidate,
+                                        scholarId = id,
+                                        name = clean
+                                    )
+                                )
+                            }
+                        }
+                        newCategoryName = ""
+                        showNewCategory = false
+                    }
+                ) { Text("Create") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    newCategoryName = ""
+                    showNewCategory = false
+                }) { Text("Cancel") }
+            }
         )
     }
 
@@ -63,7 +118,6 @@ fun ScholarDetailScreen(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Compact, rounded search
         item {
             OutlinedTextField(
                 value = query,
@@ -82,7 +136,6 @@ fun ScholarDetailScreen(
             )
         }
 
-        // Quick actions (placeholders for now)
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -91,19 +144,19 @@ fun ScholarDetailScreen(
                 ActionCard(
                     title = "Add entry",
                     icon = Icons.Outlined.Add,
-                    onClick = { /* later: open create entry */ },
+                    onClick = { },
                     modifier = Modifier.weight(1f)
                 )
                 ActionCard(
                     title = "New category",
                     icon = Icons.Outlined.Category,
-                    onClick = { /* later: create category */ },
+                    onClick = { showNewCategory = true },
                     modifier = Modifier.weight(1f)
                 )
                 ActionCard(
                     title = "Pin",
                     icon = Icons.Outlined.PushPin,
-                    onClick = { /* later: pin scholar */ },
+                    onClick = { },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -117,11 +170,11 @@ fun ScholarDetailScreen(
             )
         }
 
-        items(categories) { cat ->
+        items(filtered, key = { it.id }) { cat ->
             CategoryCard(
-                title = cat,
+                title = cat.name,
                 subtitle = "Tap to view entries",
-                onClick = { onCategoryClick(cat) }
+                onClick = { onCategoryClick(cat.name) }
             )
         }
 
@@ -163,7 +216,7 @@ private fun ActionCard(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
                 maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

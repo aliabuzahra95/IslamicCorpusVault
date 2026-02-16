@@ -17,6 +17,23 @@ import com.example.islamiccorpusvault.ui.screens.ScholarsScreen
 import com.example.islamiccorpusvault.ui.screens.SettingsScreen
 import com.example.islamiccorpusvault.ui.screens.SubcategoryScreen
 
+private fun slugify(input: String): String {
+    val lowered = input.lowercase()
+    val sb = StringBuilder()
+    var lastUnderscore = false
+    for (ch in lowered) {
+        val ok = (ch in 'a'..'z') || (ch in '0'..'9')
+        if (ok) {
+            sb.append(ch)
+            lastUnderscore = false
+        } else if (!lastUnderscore) {
+            sb.append('_')
+            lastUnderscore = true
+        }
+    }
+    return sb.toString().trim('_').ifBlank { "scholar" }
+}
+
 private fun noteDetailRoute(noteId: String): String {
     return "note_detail/${Uri.encode(noteId)}"
 }
@@ -67,23 +84,45 @@ fun AppNavHost(
                 onBack = { navController.popBackStack() },
                 onCategoryClick = { categoryName ->
                     navController.navigate(
-                        "category/${Uri.encode(name)}/${Uri.encode(categoryName)}"
+                        "category/${Uri.encode(id)}/${Uri.encode(name)}/${Uri.encode(categoryName)}"
                     )
                 }
             )
         }
 
         composable(route = Routes.CATEGORY) { backStackEntry ->
+            val scholarId = Uri.decode(backStackEntry.arguments?.getString("scholarId") ?: "")
             val scholarName = Uri.decode(backStackEntry.arguments?.getString("scholarName") ?: "")
             val categoryName = Uri.decode(backStackEntry.arguments?.getString("categoryName") ?: "")
 
             CategoryScreen(
+                scholarId = scholarId,
                 scholarName = scholarName,
                 categoryName = categoryName,
                 onCreateSubcategory = { },
                 onSubcategoryClick = { subcategoryId, subcategoryName ->
                     navController.navigate(
-                        "subcategory/${Uri.encode(scholarName)}/${Uri.encode(categoryName)}/${Uri.encode(subcategoryId)}/${Uri.encode(subcategoryName)}"
+                        "subcategory/${Uri.encode(scholarId)}/${Uri.encode(scholarName)}/${Uri.encode(categoryName)}/${Uri.encode(subcategoryId)}/${Uri.encode(subcategoryName)}"
+                    )
+                },
+                onNoteClick = { noteId -> navController.navigate(noteDetailRoute(noteId)) },
+                onCreateNote = { noteId -> navController.navigate(noteEditorRoute(noteId)) }
+            )
+        }
+        // Backward-compatible old route format kept to prevent restore-state crashes.
+        composable(route = "category/{scholarName}/{categoryName}") { backStackEntry ->
+            val scholarName = Uri.decode(backStackEntry.arguments?.getString("scholarName") ?: "")
+            val categoryName = Uri.decode(backStackEntry.arguments?.getString("categoryName") ?: "")
+            val scholarId = slugify(scholarName)
+
+            CategoryScreen(
+                scholarId = scholarId,
+                scholarName = scholarName,
+                categoryName = categoryName,
+                onCreateSubcategory = { },
+                onSubcategoryClick = { subcategoryId, subcategoryName ->
+                    navController.navigate(
+                        "subcategory/${Uri.encode(scholarId)}/${Uri.encode(scholarName)}/${Uri.encode(categoryName)}/${Uri.encode(subcategoryId)}/${Uri.encode(subcategoryName)}"
                     )
                 },
                 onNoteClick = { noteId -> navController.navigate(noteDetailRoute(noteId)) },
@@ -92,11 +131,29 @@ fun AppNavHost(
         }
 
         composable(route = Routes.SUBCATEGORY) { backStackEntry ->
+            val scholarId = Uri.decode(backStackEntry.arguments?.getString("scholarId") ?: "")
             val scholarName = Uri.decode(backStackEntry.arguments?.getString("scholarName") ?: "")
             val categoryName = Uri.decode(backStackEntry.arguments?.getString("categoryName") ?: "")
             val subcategoryName = Uri.decode(backStackEntry.arguments?.getString("subcategoryName") ?: "")
 
             SubcategoryScreen(
+                scholarId = scholarId,
+                scholarName = scholarName,
+                categoryName = categoryName,
+                subcategoryName = subcategoryName,
+                onNoteClick = { noteId -> navController.navigate(noteDetailRoute(noteId)) },
+                onCreateNote = { noteId -> navController.navigate(noteEditorRoute(noteId)) }
+            )
+        }
+        // Backward-compatible old route format kept to prevent restore-state crashes.
+        composable(route = "subcategory/{scholarName}/{categoryName}/{subcategoryId}/{subcategoryName}") { backStackEntry ->
+            val scholarName = Uri.decode(backStackEntry.arguments?.getString("scholarName") ?: "")
+            val categoryName = Uri.decode(backStackEntry.arguments?.getString("categoryName") ?: "")
+            val subcategoryName = Uri.decode(backStackEntry.arguments?.getString("subcategoryName") ?: "")
+            val scholarId = slugify(scholarName)
+
+            SubcategoryScreen(
+                scholarId = scholarId,
                 scholarName = scholarName,
                 categoryName = categoryName,
                 subcategoryName = subcategoryName,
@@ -113,10 +170,32 @@ fun AppNavHost(
                 onEdit = { navController.navigate(noteEditorRoute(noteId)) }
             )
         }
+        // Backward-compatible old route format kept to prevent restore-state crashes.
+        composable(route = "note_detail?noteId={noteId}&title={title}&body={body}&citation={citation}") { backStackEntry ->
+            val noteId = Uri.decode(backStackEntry.arguments?.getString("noteId") ?: "")
+            NoteDetailScreen(
+                noteId = noteId,
+                onEdit = { navController.navigate(noteEditorRoute(noteId)) }
+            )
+        }
 
         composable(route = Routes.NOTE_EDITOR) { backStackEntry ->
             val noteId = Uri.decode(backStackEntry.arguments?.getString("noteId") ?: "")
 
+            NoteEditorScreen(
+                noteId = noteId,
+                onCancel = { navController.popBackStack() },
+                onSave = {
+                    navController.navigate(noteDetailRoute(noteId)) {
+                        popUpTo(Routes.NOTE_EDITOR) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+        // Backward-compatible old route format kept to prevent restore-state crashes.
+        composable(route = "note_editor?noteId={noteId}&title={title}&body={body}&citation={citation}") { backStackEntry ->
+            val noteId = Uri.decode(backStackEntry.arguments?.getString("noteId") ?: "")
             NoteEditorScreen(
                 noteId = noteId,
                 onCancel = { navController.popBackStack() },

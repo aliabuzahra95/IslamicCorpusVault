@@ -18,9 +18,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.NoteAdd
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.NoteAdd
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Search
@@ -58,6 +58,7 @@ import com.example.islamiccorpusvault.ui.components.MoveScholar
 import com.example.islamiccorpusvault.ui.components.NoteActionSheet
 import com.example.islamiccorpusvault.ui.model.AppNote
 import com.example.islamiccorpusvault.data.di.AppContainer
+import com.example.islamiccorpusvault.ui.util.toPlainText
 import kotlinx.coroutines.launch
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -83,7 +84,7 @@ fun HomeScreen(
     } else {
         recentNotes.filter {
             it.title.contains(query, ignoreCase = true) ||
-                it.preview.contains(query, ignoreCase = true) ||
+                toPlainText(it.preview).contains(query, ignoreCase = true) ||
                 it.citation.contains(query, ignoreCase = true) ||
                 it.container.contains(query, ignoreCase = true)
         }
@@ -295,7 +296,7 @@ private fun QuickActions(
     ) {
         QuickActionTile(
             label = "New Note",
-            icon = Icons.Outlined.NoteAdd,
+            icon = Icons.AutoMirrored.Outlined.NoteAdd,
             onClick = onCreateNote,
             modifier = Modifier.weight(1f)
         )
@@ -404,7 +405,7 @@ private fun HomeNoteCard(
 
             Spacer(Modifier.height(6.dp))
             Text(
-                text = note.preview,
+                text = toPlainText(note.preview),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

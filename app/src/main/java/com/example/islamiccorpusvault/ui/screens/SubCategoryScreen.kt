@@ -42,11 +42,13 @@ import com.example.islamiccorpusvault.ui.components.MoveCategory
 import com.example.islamiccorpusvault.ui.components.MoveScholar
 import com.example.islamiccorpusvault.ui.components.NoteActionSheet
 import com.example.islamiccorpusvault.ui.model.AppNote
+import com.example.islamiccorpusvault.ui.util.toPlainText
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubcategoryScreen(
+    scholarId: String,
     scholarName: String,
     categoryName: String,
     subcategoryName: String,
@@ -130,7 +132,7 @@ fun SubcategoryScreen(
                     items(items = notes, key = { it.id }) { note ->
                         SubcategoryNoteCard(
                             title = note.title,
-                            body = note.preview,
+                            body = toPlainText(note.preview),
                             citation = note.citation,
                             isPinned = note.isPinned,
                             container = note.container,

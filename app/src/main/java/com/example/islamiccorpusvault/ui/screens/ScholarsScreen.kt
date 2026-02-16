@@ -19,27 +19,25 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.islamiccorpusvault.data.di.AppContainer
 import com.example.islamiccorpusvault.ui.model.Scholar
 import com.example.islamiccorpusvault.ui.navigation.Routes
+import kotlinx.coroutines.launch
 
 @Composable
 fun ScholarsScreen(navController: NavController) {
-    val scholars = remember {
-        mutableStateListOf(
-            Scholar(id = "ibn_taymiyyah", name = "Ibn Taymiyyah", era = "661–728H", madhhab = "Hanbali"),
-            Scholar(id = "ibn_al_qayyim", name = "Ibn al-Qayyim", era = "691–751H", madhhab = "Hanbali"),
-            Scholar(id = "ahmad_ibn_hanbal", name = "Ahmad ibn Hanbal", era = "164–241H", madhhab = "Hanbali"),
-            Scholar(id = "al_bukhari", name = "Al-Bukhari", era = "194–256H", madhhab = null)
-        )
-    }
+    val corpusRepository = AppContainer.corpusRepository
+    val scope = rememberCoroutineScope()
+    val scholars by corpusRepository.observeScholars().collectAsState(initial = emptyList())
 
     var showAdd by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
@@ -83,9 +81,6 @@ fun ScholarsScreen(navController: NavController) {
                         val trimmedName = name.trim()
                         if (trimmedName.isNotEmpty()) {
                             val baseId = slugify(trimmedName)
-                            val finalEra = era.trim().takeIf { it.isNotEmpty() }
-                            val finalMadhhab = madhhab.trim().takeIf { it.isNotEmpty() }
-
                             var candidate = baseId
                             var i = 2
                             while (scholars.any { it.id == candidate }) {
@@ -93,14 +88,16 @@ fun ScholarsScreen(navController: NavController) {
                                 i++
                             }
 
-                            scholars.add(
-                                Scholar(
-                                    id = candidate,
-                                    name = trimmedName,
-                                    era = finalEra,
-                                    madhhab = finalMadhhab
+                            scope.launch {
+                                corpusRepository.upsertScholar(
+                                    Scholar(
+                                        id = candidate,
+                                        name = trimmedName,
+                                        era = era.trim().takeIf { it.isNotEmpty() },
+                                        madhhab = madhhab.trim().takeIf { it.isNotEmpty() }
+                                    )
                                 )
-                            )
+                            }
                         }
 
                         name = ""
@@ -144,14 +141,14 @@ fun ScholarsScreen(navController: NavController) {
                     .fillMaxWidth()
                     .clickable { showAdd = true }
             ) {
-                androidx.compose.foundation.layout.Column(modifier = Modifier.padding(18.dp)) {
+                Column(modifier = Modifier.padding(18.dp)) {
                     Text(
                         text = "+ Add a new scholar",
                         style = MaterialTheme.typography.titleSmall
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "Create your own list (local for now)",
+                        text = "Create your own list",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

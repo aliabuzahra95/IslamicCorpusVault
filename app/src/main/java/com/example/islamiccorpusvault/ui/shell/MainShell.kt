@@ -207,10 +207,13 @@ fun MainShell() {
                                     interactionSource = interaction,
                                     indication = null
                                 ) {
-                                    navController.navigate(item.route) {
-                                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
+                                    val poppedToTabRoot = navController.popBackStack(item.route, false)
+                                    if (!poppedToTabRoot) {
+                                        navController.navigate(item.route) {
+                                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = false
+                                        }
                                     }
                                 }
                                 .padding(top = 6.dp, bottom = 5.dp),
