@@ -2,8 +2,8 @@ package com.example.islamiccorpusvault.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -13,14 +13,14 @@ sealed class NavItem(
     val icon: ImageVector
 ) {
     data object Home : NavItem(Routes.HOME, "Home", Icons.Outlined.Home)
-    data object Scholars : NavItem(Routes.SCHOLARS, "Scholars", Icons.Outlined.Person)
+    data object Notes : NavItem(Routes.NOTES, "Notes", Icons.Outlined.Description)
     data object Library : NavItem(Routes.LIBRARY, "Library", Icons.AutoMirrored.Outlined.LibraryBooks)
     data object Settings : NavItem(Routes.SETTINGS, "Settings", Icons.Outlined.Settings)
 }
 
 val bottomNavItems = listOf(
     NavItem.Home,
-    NavItem.Scholars,
+    NavItem.Notes,
     NavItem.Library,
     NavItem.Settings
 )

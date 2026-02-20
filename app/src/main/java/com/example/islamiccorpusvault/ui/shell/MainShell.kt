@@ -27,7 +27,6 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -38,6 +37,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -71,25 +71,20 @@ fun MainShell() {
     val hideShellTopBar = currentRoute == Routes.NOTE_EDITOR
     val hideShellBottomBar = currentRoute == Routes.NOTE_EDITOR
 
-    val scholarFlowRoutes = setOf(
-        Routes.SCHOLARS,
-        Routes.CATEGORY,
-        Routes.SUBCATEGORY
+    val notesFlowRoutes = setOf(
+        Routes.NOTES,
+        Routes.GENERAL_NOTES,
+        Routes.NOTE_DETAIL
     )
-    val inScholarFlow = (currentRoute in scholarFlowRoutes) ||
-        (currentRoute?.startsWith(Routes.SCHOLAR_DETAIL) == true)
+    val inNotesFlow = currentRoute in notesFlowRoutes
 
     val titleText = when {
-        currentRoute == Routes.HOME -> "Islamic Corpus Vault"
-        currentRoute == Routes.GENERAL_NOTES -> "General Notes"
-        currentRoute == Routes.SCHOLARS -> "Scholars"
+        currentRoute == Routes.HOME -> "Islamic Corpus"
+        currentRoute == Routes.NOTES || currentRoute == Routes.GENERAL_NOTES -> "Notes"
         currentRoute == Routes.LIBRARY -> "Library"
         currentRoute == Routes.SETTINGS -> "Settings"
-        currentRoute == Routes.CATEGORY -> "Category"
-        currentRoute == Routes.SUBCATEGORY -> "Subcategory"
         currentRoute == Routes.NOTE_DETAIL -> ""
         currentRoute == Routes.NOTE_EDITOR -> ""
-        currentRoute?.startsWith(Routes.SCHOLAR_DETAIL) == true -> "Scholar"
         else -> "Details"
     }
 
@@ -105,7 +100,7 @@ fun MainShell() {
             contentWindowInsets = WindowInsets.safeDrawing,
             topBar = {
                 if (!hideShellTopBar) {
-                    CenterAlignedTopAppBar(
+                    TopAppBar(
                         windowInsets = WindowInsets.statusBars,
                         navigationIcon = {
                             if (!isTopLevel && canGoBack) {
@@ -118,31 +113,12 @@ fun MainShell() {
                             }
                         },
                         title = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)
-                            ) {
-                                if (currentRoute == Routes.HOME) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.AutoStories,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier
-                                            .size(26.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                                            .padding(6.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                }
-
-                                if (titleText.isNotBlank()) {
-                                    Text(
-                                        text = titleText,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
+                            if (titleText.isNotBlank()) {
+                                Text(
+                                    text = titleText,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                         },
                         actions = {
@@ -185,28 +161,28 @@ fun MainShell() {
                         shape = RoundedCornerShape(22.dp),
                         tonalElevation = 0.dp,
                         shadowElevation = 0.dp,
-                        color = MaterialTheme.colorScheme.surface,
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 14.dp)
                             .navigationBarsPadding()
-                            .padding(bottom = 8.dp)
+                            .padding(bottom = 6.dp)
                     ) {
                         Row(
                             modifier = Modifier
-                                .height(60.dp)
-                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                                .height(54.dp)
+                                .padding(horizontal = 8.dp, vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             bottomNavItems.forEach { item ->
                                 val selected = when (item.route) {
-                                    Routes.SCHOLARS -> inScholarFlow
+                                    Routes.NOTES -> inNotesFlow
                                     else -> currentRoute == item.route
                                 }
                                 val interaction = remember { MutableInteractionSource() }
 
                                 val itemBg = if (selected) {
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
                                 } else {
                                     Color.Transparent
                                 }
@@ -229,7 +205,7 @@ fun MainShell() {
                                                 }
                                             }
                                         }
-                                        .padding(top = 6.dp, bottom = 5.dp),
+                                        .padding(top = 5.dp, bottom = 4.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Icon(
@@ -237,10 +213,10 @@ fun MainShell() {
                                         contentDescription = item.label,
                                         tint = if (selected) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(19.dp)
                                     )
 
-                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Spacer(modifier = Modifier.height(2.dp))
 
                                     Text(
                                         text = item.label,
