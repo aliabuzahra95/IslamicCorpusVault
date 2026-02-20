@@ -1,7 +1,6 @@
 package com.example.islamiccorpusvault.ui.screens
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,12 +19,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.NoteAdd
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -33,6 +34,8 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -44,17 +47,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.islamiccorpusvault.data.di.AppContainer
+import com.example.islamiccorpusvault.ui.components.CompactNoteCard
 import com.example.islamiccorpusvault.ui.components.MoveCategory
 import com.example.islamiccorpusvault.ui.components.MoveScholar
 import com.example.islamiccorpusvault.ui.components.NoteActionSheet
+import com.example.islamiccorpusvault.ui.components.normalizedPreviewText
 import com.example.islamiccorpusvault.data.repo.ScholarSubcategory
 import com.example.islamiccorpusvault.ui.model.AppNote
-import com.example.islamiccorpusvault.ui.util.toPlainText
 import kotlinx.coroutines.launch
 
 private enum class SheetMode { ACTIONS, NEW_SUBCATEGORY }
+
+private data class CategoryNoteItem(
+    val note: AppNote,
+    val tagNames: List<String>
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,12 +85,33 @@ fun CategoryScreen(
     val scope = rememberCoroutineScope()
 
     val notes by notesRepository.observeByContainer(categoryName).collectAsState(initial = emptyList())
+    val noteTags by notesRepository.observeAllNoteTagNames().collectAsState(initial = emptyList())
+    val tagsByNoteId = remember(noteTags) {
+        noteTags.groupBy(keySelector = { it.noteId }, valueTransform = { it.tagName })
+    }
     val subcategories by corpusRepository.observeSubcategories(scholarId, categoryName).collectAsState(initial = emptyList())
 
     // form state
+    var query by remember { mutableStateOf("") }
     var newSubcategoryName by remember { mutableStateOf("") }
     var selectedNoteId by remember { mutableStateOf<String?>(null) }
     val selectedNote = selectedNoteId?.let { id -> notes.firstOrNull { it.id == id } }
+    val filteredNotes = remember(notes, query, tagsByNoteId) {
+        val items = notes.map { note ->
+            CategoryNoteItem(note = note, tagNames = tagsByNoteId[note.id].orEmpty())
+        }
+        if (query.isBlank()) {
+            items
+        } else {
+            items.filter { item ->
+                item.note.title.contains(query, ignoreCase = true) ||
+                    normalizedPreviewText(item.note.preview).contains(query, ignoreCase = true) ||
+                    item.note.citation.contains(query, ignoreCase = true) ||
+                    item.note.container.contains(query, ignoreCase = true) ||
+                    item.tagNames.any { it.contains(query, ignoreCase = true) }
+            }
+        }
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -149,26 +181,25 @@ fun CategoryScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.height(8.dp))
+                    SearchBar(query = query, onQueryChange = { query = it })
+                    Spacer(Modifier.height(10.dp))
                 }
 
-                if (notes.isEmpty()) {
+                if (filteredNotes.isEmpty()) {
                     item {
                         Text(
-                            text = "No notes yet. Tap + and create one.",
+                            text = if (query.isBlank()) "No notes yet. Tap + and create one." else "No matching notes.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else {
-                    items(items = notes, key = { it.id }) { note ->
-                        NoteCard(
-                            title = note.title,
-                            body = toPlainText(note.preview),
-                            citation = note.citation,
-                            isPinned = note.isPinned,
-                            container = note.container,
-                            onClick = { onNoteClick(note.id) },
-                            onLongPress = { selectedNoteId = note.id }
+                    items(items = filteredNotes, key = { it.note.id }) { item ->
+                        CompactNoteCard(
+                            note = item.note,
+                            tagNames = item.tagNames,
+                            onClick = { onNoteClick(item.note.id) },
+                            onLongPress = { selectedNoteId = item.note.id }
                         )
                         Spacer(Modifier.height(10.dp))
                     }
@@ -357,6 +388,39 @@ fun CategoryScreen(
     }
 }
 
+@Composable
+private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        TextField(
+            value = query,
+            onValueChange = onQueryChange,
+            singleLine = true,
+            placeholder = { Text("Search notes and tags") },
+            leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = "Search") },
+            trailingIcon = {
+                if (query.isNotBlank()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(Icons.Outlined.Close, contentDescription = "Clear")
+                    }
+                }
+            },
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
 
 @Composable
 private fun TelegramSheetRow(
@@ -425,70 +489,5 @@ private fun SubcategoryPill(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-    }
-}
-
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-@Composable
-private fun NoteCard(
-    title: String,
-    body: String,
-    citation: String,
-    isPinned: Boolean,
-    container: String,
-    onClick: () -> Unit,
-    onLongPress: () -> Unit
-) {
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongPress
-            )
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                if (isPinned) {
-                    Icon(
-                        imageVector = Icons.Outlined.PushPin,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-            if (body.isNotBlank()) {
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = body,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            if (citation.isNotBlank()) {
-                Spacer(Modifier.height(10.dp))
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
-                ) {
-                    Text(
-                        text = citation,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(10.dp)
-                    )
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = container,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
 }

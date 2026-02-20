@@ -4,15 +4,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
@@ -60,21 +64,20 @@ fun MainShell() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: Routes.HOME
 
-    // FULL SCREEN editor: hide top bar + bottom bar while editing
-    val isInEditor = currentRoute.startsWith(Routes.NOTE_EDITOR)
-
-    // Top-level tabs are the ones in the bottom navigation.
     val topLevelRoutes = remember { bottomNavItems.map { it.route }.toSet() }
     val isTopLevel = currentRoute in topLevelRoutes
+
     val canGoBack = navController.previousBackStackEntry != null
+    val hideShellTopBar = currentRoute == Routes.NOTE_EDITOR
+    val hideShellBottomBar = currentRoute == Routes.NOTE_EDITOR
 
     val scholarFlowRoutes = setOf(
         Routes.SCHOLARS,
         Routes.CATEGORY,
         Routes.SUBCATEGORY
     )
-    val inScholarFlow =
-        (currentRoute in scholarFlowRoutes) || currentRoute.startsWith(Routes.SCHOLAR_DETAIL)
+    val inScholarFlow = (currentRoute in scholarFlowRoutes) ||
+        (currentRoute?.startsWith(Routes.SCHOLAR_DETAIL) == true)
 
     val titleText = when {
         currentRoute == Routes.HOME -> "Islamic Corpus Vault"
@@ -85,173 +88,187 @@ fun MainShell() {
         currentRoute == Routes.CATEGORY -> "Category"
         currentRoute == Routes.SUBCATEGORY -> "Subcategory"
         currentRoute == Routes.NOTE_DETAIL -> ""
-        currentRoute.startsWith(Routes.NOTE_EDITOR) -> "" // editor has its own top bar
-        currentRoute.startsWith(Routes.SCHOLAR_DETAIL) -> "Scholar"
+        currentRoute == Routes.NOTE_EDITOR -> ""
+        currentRoute?.startsWith(Routes.SCHOLAR_DETAIL) == true -> "Scholar"
         else -> "Details"
     }
 
     var showQuickCreate by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            if (!isInEditor) {
-                CenterAlignedTopAppBar(
-                    navigationIcon = {
-                        if (!isTopLevel && canGoBack) {
-                            IconButton(onClick = { navController.popBackStack() }) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                    contentDescription = "Back"
-                                )
-                            }
-                        }
-                    },
-                    title = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)
-                        ) {
-                            if (currentRoute == Routes.HOME) {
-                                Icon(
-                                    imageVector = Icons.Outlined.AutoStories,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier
-                                        .size(26.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                                        .padding(6.dp)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                            }
-
-                            if (titleText.isNotBlank()) {
-                                Text(
-                                    text = titleText,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-                    },
-                    actions = {
-                        if (isTopLevel) {
-                            IconButton(
-                                onClick = {
-                                    navController.navigate(Routes.SETTINGS) {
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            contentWindowInsets = WindowInsets.safeDrawing,
+            topBar = {
+                if (!hideShellTopBar) {
+                    CenterAlignedTopAppBar(
+                        windowInsets = WindowInsets.statusBars,
+                        navigationIcon = {
+                            if (!isTopLevel && canGoBack) {
+                                IconButton(onClick = { navController.popBackStack() }) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                                        contentDescription = "Back"
+                                    )
                                 }
+                            }
+                        },
+                        title = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Settings,
-                                    contentDescription = "Settings"
-                                )
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                        actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-            }
-        },
-        floatingActionButton = {
-            if (!isInEditor && currentRoute == Routes.HOME) {
-                FloatingActionButton(onClick = { showQuickCreate = true }) {
-                    Icon(imageVector = Icons.Outlined.Add, contentDescription = "Quick create")
-                }
-            }
-        },
-        bottomBar = {
-            if (!isInEditor) {
-                // Telegram-like compact pill bottom bar
-                Surface(
-                    shape = RoundedCornerShape(22.dp),
-                    tonalElevation = 0.dp,
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp)
-                        .navigationBarsPadding()
-                        .padding(bottom = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .height(60.dp)
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        bottomNavItems.forEach { item ->
-                            val selected = when (item.route) {
-                                Routes.SCHOLARS -> inScholarFlow
-                                else -> currentRoute == item.route
-                            }
-                            val interaction = remember { MutableInteractionSource() }
+                                if (currentRoute == Routes.HOME) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.AutoStories,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier
+                                            .size(26.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                            .padding(6.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                }
 
-                            val itemBg = if (selected) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                            } else {
-                                Color.Transparent
+                                if (titleText.isNotBlank()) {
+                                    Text(
+                                        text = titleText,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
                             }
-
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(itemBg)
-                                    .clickable(
-                                        interactionSource = interaction,
-                                        indication = null
-                                    ) {
-                                        val poppedToTabRoot = navController.popBackStack(item.route, false)
-                                        if (!poppedToTabRoot) {
-                                            navController.navigate(item.route) {
-                                                popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                                launchSingleTop = true
-                                                restoreState = false
-                                            }
+                        },
+                        actions = {
+                            if (isTopLevel) {
+                                IconButton(
+                                    onClick = {
+                                        navController.navigate(Routes.SETTINGS) {
+                                            launchSingleTop = true
+                                            restoreState = true
                                         }
                                     }
-                                    .padding(top = 6.dp, bottom = 5.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    imageVector = item.icon,
-                                    contentDescription = item.label,
-                                    tint = if (selected) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Settings,
+                                        contentDescription = "Settings"
+                                    )
+                                }
+                            }
+                        },
+                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background,
+                            scrolledContainerColor = MaterialTheme.colorScheme.background,
+                            titleContentColor = MaterialTheme.colorScheme.onBackground,
+                            navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+                            actionIconContentColor = MaterialTheme.colorScheme.onBackground
+                        )
+                    )
+                }
+            },
+            floatingActionButton = {
+                if (currentRoute == Routes.HOME) {
+                    FloatingActionButton(onClick = { showQuickCreate = true }) {
+                        Icon(imageVector = Icons.Outlined.Add, contentDescription = "Quick create")
+                    }
+                }
+            },
+            bottomBar = {
+                if (!hideShellBottomBar) {
+                    Surface(
+                        shape = RoundedCornerShape(22.dp),
+                        tonalElevation = 0.dp,
+                        shadowElevation = 0.dp,
+                        color = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp)
+                            .navigationBarsPadding()
+                            .padding(bottom = 8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .height(60.dp)
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            bottomNavItems.forEach { item ->
+                                val selected = when (item.route) {
+                                    Routes.SCHOLARS -> inScholarFlow
+                                    else -> currentRoute == item.route
+                                }
+                                val interaction = remember { MutableInteractionSource() }
 
-                                Spacer(modifier = Modifier.height(3.dp))
+                                val itemBg = if (selected) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                } else {
+                                    Color.Transparent
+                                }
 
-                                Text(
-                                    text = item.label,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (selected) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 2.dp)
-                                )
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(itemBg)
+                                        .clickable(
+                                            interactionSource = interaction,
+                                            indication = null
+                                        ) {
+                                            val poppedToTabRoot = navController.popBackStack(item.route, false)
+                                            if (!poppedToTabRoot) {
+                                                navController.navigate(item.route) {
+                                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                                    launchSingleTop = true
+                                                    restoreState = false
+                                                }
+                                            }
+                                        }
+                                        .padding(top = 6.dp, bottom = 5.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(
+                                        imageVector = item.icon,
+                                        contentDescription = item.label,
+                                        tint = if (selected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+
+                                    Spacer(modifier = Modifier.height(3.dp))
+
+                                    Text(
+                                        text = item.label,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (selected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(bottom = 2.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                AppNavHost(
+                    navController = navController,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
-    ) { padding ->
-        AppNavHost(
-            navController = navController,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        )
     }
 
     if (showQuickCreate) {
@@ -281,7 +298,6 @@ fun MainShell() {
 
                 Button(
                     onClick = {
-                        // TODO: create note
                         showQuickCreate = false
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -289,7 +305,6 @@ fun MainShell() {
 
                 Button(
                     onClick = {
-                        // TODO: create quote
                         showQuickCreate = false
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -297,7 +312,6 @@ fun MainShell() {
 
                 Button(
                     onClick = {
-                        // TODO: create reference
                         showQuickCreate = false
                     },
                     modifier = Modifier.fillMaxWidth()

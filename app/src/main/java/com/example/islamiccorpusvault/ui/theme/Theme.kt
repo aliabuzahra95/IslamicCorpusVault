@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
 /**
  * Theme wiring (light/dark colorScheme).
@@ -34,13 +35,13 @@ private val DarkColors = darkColorScheme(
     primary = DarkPrimary,
     onPrimary = DarkOnPrimary,
 
-    background = DarkBackground,
+    background = Color(0xFF070D1A),
     onBackground = DarkOnSurface,
 
-    surface = DarkSurface,
+    surface = Color(0xFF0E1627),
     onSurface = DarkOnSurface,
 
-    surfaceVariant = DarkSurfaceVariant,
+    surfaceVariant = Color(0xFF1A2740),
     onSurfaceVariant = DarkOnSurfaceVariant,
 
     outline = DarkOutline
