@@ -46,13 +46,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.islamiccorpusvault.data.di.AppContainer
-import com.example.islamiccorpusvault.ui.components.DisplayModeSheet
+import com.example.islamiccorpusvault.ui.components.ActionSheetHost
 import com.example.islamiccorpusvault.ui.components.AppSearchField
-import com.example.islamiccorpusvault.ui.components.MoveCategory
-import com.example.islamiccorpusvault.ui.components.MoveScholar
-import com.example.islamiccorpusvault.ui.components.NoteActionSheet
+import com.example.islamiccorpusvault.ui.components.DisplayModeSheet
 import com.example.islamiccorpusvault.ui.components.NoteDisplayCard
 import com.example.islamiccorpusvault.ui.components.NoteUiItem
+import com.example.islamiccorpusvault.ui.components.rememberActionSheetHostState
 import com.example.islamiccorpusvault.ui.model.AppNote
 import com.example.islamiccorpusvault.ui.settings.NoteDisplayMode
 import com.example.islamiccorpusvault.ui.util.toPlainText
@@ -65,8 +64,8 @@ fun HomeScreen(
     onOpenNoteEditor: (noteId: String) -> Unit = {}
 ) {
     var query by remember { mutableStateOf("") }
-    var selectedNoteId by remember { mutableStateOf<String?>(null) }
     var showDisplaySheet by remember { mutableStateOf(false) }
+    val actionHostState = rememberActionSheetHostState()
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -74,6 +73,7 @@ fun HomeScreen(
     val uiPrefs = AppContainer.uiPrefsRepository
 
     val displayMode by uiPrefs.displayModeFlow.collectAsState(initial = NoteDisplayMode.LIST)
+    val virtualFolders by uiPrefs.virtualFolderPathsFlow.collectAsState(initial = emptyList())
     val notes by notesRepository.observeAll().collectAsState(initial = emptyList())
     val noteTags by notesRepository.observeAllNoteTagNames().collectAsState(initial = emptyList())
     val attachments by notesRepository.observeAllAttachments().collectAsState(initial = emptyList())
@@ -85,7 +85,16 @@ fun HomeScreen(
         attachments.groupingBy { it.noteId }.eachCount()
     }
 
-    val selectedNote = selectedNoteId?.let { id -> notes.firstOrNull { it.id == id } }
+    val allFolderPaths = remember(notes, virtualFolders) {
+        val fromNotes = notes.map { it.container.trim().trim('/') }.filter { it.isNotBlank() }
+        (fromNotes + virtualFolders)
+            .flatMap { fullPath ->
+                val segments = fullPath.split('/').filter { it.isNotBlank() }
+                segments.indices.map { idx -> segments.take(idx + 1).joinToString("/") }
+            }
+            .distinct()
+            .sorted()
+    }
 
     val filtered = remember(notes, query, tagsByNoteId, attachmentCountByNoteId) {
         val items = notes.map { note ->
@@ -195,7 +204,7 @@ fun HomeScreen(
                             item = item,
                             mode = displayMode,
                             onClick = { onOpenNoteDetail(item.note.id) },
-                            onLongPress = { selectedNoteId = item.note.id }
+                            onLongPress = { actionHostState.showNoteActions(item.note.id) }
                         )
                     }
                 }
@@ -208,7 +217,7 @@ fun HomeScreen(
                             notes = recentActivity,
                             mode = displayMode,
                             onOpenNoteDetail = onOpenNoteDetail,
-                            onLongPress = { selectedNoteId = it }
+                            onLongPress = { actionHostState.showNoteActions(it) }
                         )
                     }
                 }
@@ -235,7 +244,7 @@ fun HomeScreen(
                             item = item,
                             mode = displayMode,
                             onClick = { onOpenNoteDetail(item.note.id) },
-                            onLongPress = { selectedNoteId = item.note.id }
+                            onLongPress = { actionHostState.showNoteActions(item.note.id) }
                         )
                     }
                 }
@@ -248,7 +257,7 @@ fun HomeScreen(
                             notes = pinned,
                             mode = displayMode,
                             onOpenNoteDetail = onOpenNoteDetail,
-                            onLongPress = { selectedNoteId = it }
+                            onLongPress = { actionHostState.showNoteActions(it) }
                         )
                     }
                 }
@@ -268,39 +277,22 @@ fun HomeScreen(
         )
     }
 
-    if (selectedNote != null) {
-        NoteActionSheet(
-            title = selectedNote.title,
-            isPinned = selectedNote.isPinned,
-            moveTree = listOf(
-                MoveScholar(
-                    name = "Folders",
-                    categories = listOf(
-                        MoveCategory("General Notes", listOf("Inbox", "Highlights")),
-                        MoveCategory("Projects", listOf("Ideas", "Research"))
-                    )
-                )
-            ),
-            onDismiss = { selectedNoteId = null },
-            onTogglePin = {
-                scope.launch { notesRepository.togglePin(selectedNote.id) }
-                selectedNoteId = null
-            },
-            onMoveToGeneral = {
-                scope.launch { notesRepository.move(selectedNote.id, "General Notes") }
-                selectedNoteId = null
-                onOpenGeneralNotes()
-            },
-            onMoveToDestination = { destination ->
-                scope.launch { notesRepository.move(selectedNote.id, destination) }
-                selectedNoteId = null
-            },
-            onDelete = {
-                scope.launch { notesRepository.deleteById(selectedNote.id) }
-                selectedNoteId = null
-            }
-        )
-    }
+    ActionSheetHost(
+        state = actionHostState,
+        notes = notes,
+        folderPaths = allFolderPaths,
+        onTogglePin = { noteId -> scope.launch { notesRepository.togglePin(noteId) } },
+        onMoveToGeneral = { noteId ->
+            scope.launch { notesRepository.move(noteId, "General Notes") }
+            onOpenGeneralNotes()
+        },
+        onMoveToDestination = { noteId, destination ->
+            scope.launch { notesRepository.move(noteId, destination) }
+        },
+        onDeleteNote = { noteId -> scope.launch { notesRepository.deleteById(noteId) } },
+        onRenameFolder = { _, _ -> },
+        onDeleteFolder = { }
+    )
 }
 
 @Composable

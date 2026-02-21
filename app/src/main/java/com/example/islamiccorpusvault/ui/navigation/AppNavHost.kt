@@ -14,6 +14,7 @@ import com.example.islamiccorpusvault.ui.screens.LibraryScreen
 import com.example.islamiccorpusvault.ui.screens.NoteDetailScreen
 import com.example.islamiccorpusvault.ui.screens.NoteEditorScreen
 import com.example.islamiccorpusvault.ui.screens.NotesScreen
+import com.example.islamiccorpusvault.ui.screens.QuranScreen
 import com.example.islamiccorpusvault.ui.screens.SettingsScreen
 
 private fun noteDetailRoute(noteId: String): String {
@@ -63,6 +64,7 @@ fun AppNavHost(
                 onOpenNote = { noteId -> navController.navigate(noteDetailRoute(noteId)) }
             )
         }
+        composable(Routes.QURAN) { QuranScreen() }
         composable(Routes.SETTINGS) { SettingsScreen() }
 
         composable(route = Routes.NOTE_DETAIL) { backStackEntry ->
@@ -70,6 +72,7 @@ fun AppNavHost(
 
             NoteDetailScreen(
                 noteId = noteId,
+                onBack = { navController.popBackStack() },
                 onEdit = { navController.navigate(noteEditorRoute(noteId)) }
             )
         }
@@ -78,6 +81,7 @@ fun AppNavHost(
             val noteId = Uri.decode(backStackEntry.arguments?.getString("noteId") ?: "")
             NoteDetailScreen(
                 noteId = noteId,
+                onBack = { navController.popBackStack() },
                 onEdit = { navController.navigate(noteEditorRoute(noteId)) }
             )
         }

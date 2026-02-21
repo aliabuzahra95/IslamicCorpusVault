@@ -68,7 +68,7 @@ fun MainShell() {
     val isTopLevel = currentRoute in topLevelRoutes
 
     val canGoBack = navController.previousBackStackEntry != null
-    val hideShellTopBar = currentRoute == Routes.NOTE_EDITOR
+    val hideShellTopBar = currentRoute == Routes.NOTE_EDITOR || currentRoute == Routes.NOTE_DETAIL
     val hideShellBottomBar = currentRoute == Routes.NOTE_EDITOR
 
     val notesFlowRoutes = setOf(
@@ -82,6 +82,7 @@ fun MainShell() {
         currentRoute == Routes.HOME -> "Islamic Corpus"
         currentRoute == Routes.NOTES || currentRoute == Routes.GENERAL_NOTES -> "Notes"
         currentRoute == Routes.LIBRARY -> "Library"
+        currentRoute == Routes.QURAN -> "Quran"
         currentRoute == Routes.SETTINGS -> "Settings"
         currentRoute == Routes.NOTE_DETAIL -> ""
         currentRoute == Routes.NOTE_EDITOR -> ""
